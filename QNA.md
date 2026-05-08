@@ -1,5 +1,5 @@
 <h3>how can i contribute?</h3>
-<p><a href="https://coolsite.cv/contact">message me</a>, <a href="https://soggy.world">ping cvgd on the discord server</a> or <a href="https://github.com/ssoggycat/drive-3/pulls">send a pull request!</a></p>
+<p><a href="https://coolsite.cv/contact">message me</a>, <a href="https://soggy.world">ping cvgd on the discord server</a> or <a href="https://github.com/ssoggycat/drive-site/pulls">send a pull request!</a></p>
 
 <h3>why move? <img src="assets/images/sogmoji/wtf.png" width="22"></h3>
 <p><li>the desktop app doesn't sync images correctly, leading to months upon months of delay.<br>managing 400+ images manually is infuriating, and removing the folder every time to replace it with a copy takes a long time and can seemingly wipe comments.</li></p>

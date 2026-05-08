@@ -64,8 +64,8 @@ img {
 .readmenav {display: flex; gap: 6px}
 .readmenavbtn {
     font-family: "google sans";
-    width: 32px; height: 32px;
-    border-radius: 10px; background: #2b323e;
+    width: 50px !important; height: 32px;
+    border-radius: 50px !important; background: #2b323e;
     color: #c5d5f3; font-size: 12px;
 }
 .readmenavbtn:hover {background: #2b323e}
@@ -208,7 +208,8 @@ li {
 }
 
 .discordmenuname {
-    font-size: 1.25em; color: #e6e6e6;
+    font-weight: 600;
+    font-size: 1.35em; color: #eee;
     overflow: hidden; text-overflow: ellipsis;
     white-space: nowrap;
 }
@@ -219,7 +220,7 @@ li {
     align-items: center; gap: 8px;
     padding: 10px 12px; border-radius: 12px;
     border: none; background: #1e1f20;
-    color: #e6e6e6; cursor: pointer;
+    color: #eee; cursor: pointer;
 }
 .discordmenulogout:hover {background: #232324}
 
@@ -381,6 +382,48 @@ li {
     display: flex; align-items: center;
     gap: 8px; padding: 10px;
 }
+
+.filemore {
+    margin-left: auto;
+    width: 34px; height: 34px;
+    display: grid; place-items: center;
+    border: none; border-radius: 999px;
+    background: transparent;
+    cursor: pointer;
+    color: #9aa0a6;
+}
+.filemore:hover { background: rgba(255,255,255,0.06); }
+.filemore:active { background: rgba(255,255,255,0.09); }
+.filemore svg { display: block; }
+
+/*//////////////////////////////////////////////////////////////////////*/
+
+.contextmenuwrap {
+    position: fixed; inset: 0;
+    z-index: 5000;
+}
+.contextmenuwrap[hidden] { display: none !important; }
+.contextmenubackdrop {
+    position: absolute; inset: 0;
+    background: transparent;
+}
+.contextmenu {
+    position: absolute;
+    min-width: 260px; max-width: min(320px, calc(100vw - 16px));
+    border-radius: 12px; background: #1b1b1b;
+    box-shadow: 0 16px 44px rgba(0,0,0,0.75);
+}
+.contextmenuitem {
+    width: 100%;
+    display: flex; align-items: center;
+    gap: 10px; padding: 0.5em; border: 0;
+    cursor: pointer; background: transparent;
+    color: #eee; font: inherit; text-align: left;
+}
+.contextmenuitem:hover {background: rgba(255,255,255,0.06); }
+.contextmenuitem:active {background: rgba(255,255,255,0.09); }
+.contextmenuicon {width: 24px; height: 24px; display: grid; place-items: center; flex: 0 0 24px; }
+.contextmenutext {flex: 1 1 auto}
 
 .icon {
     display: block; width: 18px;
@@ -602,26 +645,19 @@ li {
     right: 8px; bottom: 8px;
     width: min(360px, 34vw); 
     border-radius: 10px;
-    padding: 12px; display: flex;
+    display: flex; z-index: 5;
     flex-direction: column; overflow: hidden;
-    z-index: 5;
     overscroll-behavior: contain;
     touch-action: pan-y;
     pointer-events: auto;
 }
-
-.mediacomments[hidden] {
-    display: none !important;
-}
+.mediacomments[hidden] {display: none !important}
 
 .mediacommentslist {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: auto;
-    display: flex;
+    flex: 1 1 auto; min-height: 0;
+    overflow: auto; display: flex;
     flex-direction: column;
-    gap: 8px;
-    overscroll-behavior: contain;
+    gap: 5px; overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
 }
 
@@ -632,15 +668,23 @@ li {
 .mediacommentchain {
     display: flex;
     flex-direction: column;
-    gap: 0;
-    border-radius: 8px;
+    gap: 0; border-radius: 8px;
     overflow: hidden;
     flex: 0 0 auto;
+}
+.mediacommentchain.dimmed {
+    opacity: 0.35;
+    filter: grayscale(0.35);
+    /* is it better to use ms over s? answer: Fuuckkkk i don't knowwww */
+    transition: opacity 140ms ease, filter 140ms ease;
+}
+.mediacommentchain:not(.dimmed) {
+    opacity: 1;
+    filter: none;
 }
 .mediacommentchain .mediacomment {
     border: none;
     border-radius: 0;
-    border-top: 1px solid rgba(138,180,248,0.08);
 }
 .mediacommentchain .mediacomment:first-child {border-top: none}
 .mediacomment.clickable {cursor: pointer}
@@ -701,43 +745,37 @@ li {
 /*//////////////////////////////////////////////////////////////////////*/
 
 .commentcompose {
-    width: 100%; resize: vertical;
-    min-height: 60px; font: inherit;
+    width: 100%; height: 78px; resize: none;
+    min-height: 78px; max-height: 78px;
+    overflow: auto; font: inherit;
     color: #eee; background: rgba(0,0,0,0.18);
-    border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.08); 
+    border-radius: 10px 10px 10px 0;
     padding: 10px; outline: none;
 }
 
-.commentcomposerwrap {
-    margin-top: 8px;
-}
+.commentcomposerwrap {margin-top: 0}
 .regioncomposer {
     position: sticky;
-    bottom: 0;
-    z-index: 3;
+    bottom: 0; z-index: 3;
     background: #161719;
 }
 
-.commentcompose:focus {
-    border-color: rgba(138,180,248,0.35);
-}
-
+.commentcompose:focus {border-color: rgba(138,180,248,0.35)}
 .commentcomposeactions {
-    display: flex; justify-content: flex-end;
-    gap: 8px; margin-top: 8px;
+    display: flex; justify-content: flex-start;
+    gap: 0; margin-top: 0;
 }
 .commentpost {
-    font: inherit; padding: 8px 10px;
-    border-radius: 10px; border: 1px solid rgba(138,180,248,0.25);
+    font: inherit; padding: 4px 8px 4px 8px;
+    border-radius: 0 0 10px 10px; border: 1px solid rgba(138,180,248,0.25);
     background: rgba(138,180,248,0.10); color: #8ab4f8;
     cursor: pointer;
 }
-.commentpost:hover {
-    background: rgba(138,180,248,0.16);
-}
-.commentpost:disabled {
-    opacity: 0.5; cursor: default;
-}
+.commentpost:hover {background: rgba(138,180,248,0.16)}
+.commentpost:disabled {opacity: 0.5; cursor: default}
+
+/*//////////////////////////////////////////////////////////////////////*/
 
 .discordloginbutton,
 .discordlogout {

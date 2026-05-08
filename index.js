@@ -255,7 +255,13 @@
     return p ? `${rootprefix}/${p}` : rootprefix;
   }
   function rawurl(path) {
-    return `https://raw.githubusercontent.com/ssoggycat/drive-3/${state.branch}/${repopath(path).split("/").map(encodeURIComponent).join("/")}`;
+    const p = String(path || "").replace(/\\/g, "/");
+    const name = basename(p);
+    if (!name) return "https://mirror.guweh.com/";
+    const isvid = videoext.test(name) || p.startsWith("vids/") || p.includes("/vids/");
+    return isvid
+      ? `https://mirror.guweh.com/vids/${encodeURIComponent(name)}`
+      : `https://mirror.guweh.com/${encodeURIComponent(name)}`;
   }
 
   /*//////////////////////////////////////////////////////////////////////*/
@@ -278,6 +284,35 @@
     try {localStorage.removeItem(cachekey); } catch (_) {}
   }
 
+  async function mirrorfetchjson(path) {
+    const res = await fetch(`https://mirror.guweh.com/${path}`, {cache: "force-cache"});
+    if (!res.ok) throw new Error(`mirror fetch failed (${res.status})`);
+    return await res.json();
+  }
+
+  async function fetchtreemirror() {
+    const [images, videos] = await Promise.all([
+      mirrorfetchjson("images.json"),
+      mirrorfetchjson("videos.json")
+    ]);
+    const imgrows = Array.isArray(images) ? images : [];
+    const vidrows = Array.isArray(videos) ? videos : [];
+    const blobs = [];
+    for (const name of imgrows) {
+      if (typeof name !== "string" || !name.trim()) continue;
+      const p = name.replace(/^\/+/, "");
+      if (!p || p.includes("..")) continue;
+      blobs.push({ type: "blob", path: p });
+    }
+    for (const name of vidrows) {
+      if (typeof name !== "string" || !name.trim()) continue;
+      const p = name.replace(/^\/+/, "");
+      if (!p || p.includes("..")) continue;
+      blobs.push({ type: "blob", path: p });
+    }
+    return {tree: blobs, branch: "mirror", truncated: false};
+  }
+
   async function githubfetch(path) {
     return (await fetch(`https://api.github.com${path}`,
       {headers: {Accept: "application/vnd.github+json"}})).json();
@@ -292,7 +327,7 @@
       .filter((x) => x.path === rootprefix || x.path.startsWith(`${rootprefix}/`))
       .map((x) => ({ ...x, path: x.path.slice(`${rootprefix}/`.length) }))
       .filter((x) => x.path && !x.path.split("/").some((seg) => seg.startsWith(".")));
-    return { tree: filtered, branch: state.branch, truncated: !!tree.truncated };
+    return {tree: filtered, branch: state.branch, truncated: !!tree.truncated};
   }
 
   function listchildren(prefix) {
@@ -488,18 +523,35 @@
       for (const f of files) {
         const card = document.createElement("div");
         card.className = "filecard";
+        card.setAttribute("data-filepath", f.path);
+        card.setAttribute("data-filename", f.name);
         const isimg = imageext.test(f.name);
         const isvid = videoext.test(f.name);
         const thumb = (isimg || isvid)
           ? `<img class="thumbimg thumbimgpending" data-src="${thumburl(f.path)}" alt="" loading="lazy">`
           : "";
         card.innerHTML =
-          `<div class="filehead">${iconfor(f.name)}<span class="name"></span></div>` +
+          `<div class="filehead">${iconfor(f.name)}<span class="name"></span>` +
+          `<button type="button" class="filemore" aria-label="file options" title="options">` +
+          `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#9aa0a6" viewBox="0 -960 960 960">` +
+          `<path d="M480-160q-33 0-56-23t-24-57 24-56 56-24 57 24 23 56-23 57-57 23m0-240q-33 0-56-23t-24-57 24-56 56-24 57 24 23 56-23 57-57 23m0-240q-33 0-56-23t-24-57 24-56 56-24 57 24 23 56-23 57-57 23"/>` +
+          `</svg>` +
+          `</button>` +
+          `</div>` +
           `<div class="thumb">` +
           `<div class="thumbicon">${iconfor(f.name)}</div>` +
           `${thumb || '<div class="thumbfallback">click to open</div>'}` +
           `</div>`;
         card.querySelector(".name").textContent = f.name;
+        const more = card.querySelector(".filemore");
+        if (more) {
+          more.addEventListener("click", e => {
+            e.stopPropagation();
+            globalThis.dispatchEvent(new globalThis.CustomEvent("drivecontext:open", {
+              detail: {source: "button", x: e.clientX, y: e.clientY, filepath: f.path}
+            }));
+          });
+        }
         card.addEventListener("click", e => {
           if (isimg || isvid) {
             openlightbox(rawurl(f.path), f.path, !!isvid);
@@ -672,6 +724,15 @@
     } catch { return ""; }
   }
 
+  function regionequals(a, b) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== 4 || b.length !== 4) return false;
+    const eps = 1e-6;
+    return Math.abs(Number(a[0]) - Number(b[0])) <= eps &&
+      Math.abs(Number(a[1]) - Number(b[1])) <= eps &&
+      Math.abs(Number(a[2]) - Number(b[2])) <= eps &&
+      Math.abs(Number(a[3]) - Number(b[3])) <= eps;
+  }
+
   function rendercommentpanel(comments) {
     if (!medicomments || !medicommentslist) return;
     if (!state.commentsopen) {
@@ -707,6 +768,38 @@
       .filter(c => !c?.replyingto || !byid.has(String(c.replyingto)))
       .sort((a, b) => Number(a?.id || 0) - Number(b?.id || 0));
 
+    let focusedchainroot = null;
+    if (activefocuskey) {
+      for (const root of roots) {
+        const stack = [root];
+        while (stack.length) {
+          const cur = stack.pop();
+          const curkey = String(cur?.replyid || (cur?.id ? `id:${cur.id}` : ""));
+          if (curkey && curkey === activefocuskey) {
+            focusedchainroot = root;
+            break;
+          }
+          const childkey = cur?.replyid ? String(cur.replyid) : String(cur?.id || "");
+          const kids = childkey ? (byparent.get(childkey) || []) : [];
+          for (let i = kids.length - 1; i >= 0; i--) stack.push(kids[i]);
+        }
+        if (focusedchainroot) break;
+      }
+    }
+    if (!focusedchainroot && activeregion) {
+      for (const root of roots) {
+        const stack = [root];
+        let matched = false;
+        while (stack.length) {
+          const cur = stack.pop();
+          if (regionequals(cur?.region, activeregion)) {matched = true; break}
+          const childkey = cur?.replyid ? String(cur.replyid) : String(cur?.id || "");
+          const kids = childkey ? (byparent.get(childkey) || []) : [];
+          for (let i = kids.length - 1; i >= 0; i--) stack.push(kids[i]);
+        }
+        if (matched) {focusedchainroot = root; break}
+      }
+    }
     for (const root of roots) {
       const chain = [];
       const stack = [{ node: root, depth: 0 }];
@@ -720,6 +813,9 @@
 
       const chainwrap = document.createElement("div");
       chainwrap.className = "mediacommentchain";
+      const chainisfocused = !focusedchainroot || focusedchainroot === root;
+      chainwrap.classList.toggle("dimmed", !chainisfocused);
+      chainwrap.hidden = false;
       for (const item of chain) {
         const c = item.node;
         const cid = String(c.replyid || (c.id ? `id:${c.id}` : ""));
@@ -812,7 +908,7 @@
         }
       }; medicommentslist.appendChild(chainwrap);
     }
-    if (loggedin && activeregion && !activereplyto) {
+    if (loggedin && activeregion && !activereplyto && !activefocuskey) {
       const composer = document.createElement("div");
       composer.className = "mediacomment commentcomposerwrap regioncomposer";
       
@@ -903,10 +999,11 @@
       if (isactive) matchedactive = true;
       box.classList.toggle("active", !!isactive);
       box.addEventListener("click", e => {
-        if (!state.commentsopen || !getsetting("discord_token", "")) return;
+        if (!state.commentsopen) return;
         e.stopPropagation();
-        activereplyto = null;
-        activefocuskey = null;
+        const target = comments.find(c => regionequals(c?.region, [x1, y1, x2, y2]));
+        activefocuskey = target ? String(target.replyid || (target.id ? `id:${target.id}` : "")) : null;
+        activereplyto = target?.replyid ? String(target.replyid) : null;
         activeregion = [x1, y1, x2, y2];
         renderregions(comments);
         rendercommentpanel(comments);
@@ -1088,7 +1185,9 @@
     }
     const stoploading = startloading();
     try {
-      const fresh = await fetchtreefresh();
+      let fresh = null;
+      try {fresh = await fetchtreemirror()} catch (_) {}
+      if (!fresh) fresh = await fetchtreefresh();
       stoploading();
       state.tree = fresh.tree;
       state.branch = fresh.branch;
@@ -1313,5 +1412,10 @@
   showmddoc(getsetting("readmedoc", "README.md"));
   loadtree(false);
   window.setTimeout(openfromhashifany, 0);
+
+  globalThis.meow = {
+    rawurl, thumburl, openlightbox,
+    imageext, videoext
+  };
 
 })();
