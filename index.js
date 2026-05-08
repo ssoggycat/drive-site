@@ -152,6 +152,7 @@
     const redirect = `${location.origin}/index.html`;
     const st = Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2);
     setsetting("discord_oauth_state", st);
+    setsetting("discord_oauth_redirect", redirect);
     const qs = new URLSearchParams({
       client_id: "1501279291848003744",
       response_type: "code",
@@ -198,8 +199,13 @@
     if (getsetting("discord_token", "") && getdiscorduser()) return;
     const code = getsetting("discord_code", "");
     if (!code) return;
+    const redirect = getsetting("discord_oauth_redirect", `${location.origin}/index.html`);
     try {
-      const res = await fetch(`${commentsliveapibase}/me?code=${encodeURIComponent(code)}`, { cache: "no-store" });
+      const qp = new URLSearchParams({
+        code: String(code),
+        redirect_uri: String(redirect || "")
+      });
+      const res = await fetch(`${commentsliveapibase}/me?${qp.toString()}`, { cache: "no-store" });
       if (!res.ok) return;
       const j = await res.json();
       if (!j || typeof j !== "object") return;

@@ -244,19 +244,19 @@
         const c = closestfilecard(holdstart?.target);
         const filepath = fileinfofromcard(c).filepath;
         if (!filepath) return;
-        openmenu({ x: holdstart.x, y: holdstart.y, filepath, inpreview: false });
+        openmenu({x: holdstart.x, y: holdstart.y, filepath, inpreview: false });
       }, 520);
-    }, { passive: true });
+    }, {passive: true});
 
-    drivecontent.addEventListener("pointerup", clearhold, { passive: true });
-    drivecontent.addEventListener("pointercancel", clearhold, { passive: true });
+    drivecontent.addEventListener("pointerup", clearhold, {passive: true});
+    drivecontent.addEventListener("pointercancel", clearhold, {passive: true});
     drivecontent.addEventListener("pointermove", e => {
       if (!holdstart || !holdtimer) return;
       const dx = Math.abs(e.clientX - holdstart.x);
       const dy = Math.abs(e.clientY - holdstart.y);
       if (dx > 12 || dy > 12) clearhold();
-    }, { passive: true });
-    drivecontent.addEventListener("scroll", clearhold, { passive: true, capture: true });
+    }, {passive: true});
+    drivecontent.addEventListener("scroll", clearhold, {passive: true, capture: true});
   }
 
   if (mediacontent) {
@@ -267,15 +267,15 @@
       if (!filepath) return;
       e.preventDefault();
       e.stopPropagation();
-      openmenu({ x: e.clientX, y: e.clientY, filepath, inpreview: true });
-    }, { capture: true });
+      openmenu({x: e.clientX, y: e.clientY, filepath, inpreview: true});
+    }, {capture: true});
   }
 
   globalThis.addEventListener("drivecontext:open", e => {
     const d = e?.detail || {};
     const filepath = String(d.filepath || "");
     if (!filepath) return;
-    openmenu({ x: Number(d.x || 0), y: Number(d.y || 0), filepath, inpreview: false });
+    openmenu({x: Number(d.x || 0), y: Number(d.y || 0), filepath, inpreview: false});
   });
 
 })();
