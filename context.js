@@ -261,6 +261,8 @@
 
   if (mediacontent) {
     mediacontent.addEventListener("contextmenu", e => {
+      const regionlayer = document.querySelector(".mediaregionlayer");
+      if (regionlayer?.classList.contains("selecting")) return;
       const filepath = hashfilepath();
       if (!filepath) return;
       e.preventDefault();

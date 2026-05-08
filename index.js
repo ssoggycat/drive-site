@@ -149,7 +149,7 @@
   }
   function builddiscordauthorizeurl() {
     const base = "https://discord.com/oauth2/authorize";
-    const redirect = `${location.origin}${location.pathname}`;
+    const redirect = `${location.origin}/index.html`;
     const st = Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2);
     setsetting("discord_oauth_state", st);
     const qs = new URLSearchParams({
@@ -1281,6 +1281,7 @@
   if (mediaregionlayer) {
     mediaregionlayer.addEventListener("mousedown", e => {
       if (!state.commentsopen || !getsetting("discord_token", "")) return;
+      if (e.button !== 0) return;
       if (e.target !== mediaregionlayer) return;
       const r = mediaregionlayer.getBoundingClientRect();
       regionselectstart = [e.clientX - r.left, e.clientY - r.top];
