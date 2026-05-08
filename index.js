@@ -61,6 +61,8 @@
   let activefocuskey = null;
   let activeregion = null;
   let regionselectstart = null;
+  let regionpointerdown = null;
+  let regioncycle = null;
 
   /*//////////////////////////////////////////////////////////////////////*/
 
@@ -990,12 +992,16 @@
       if (!Array.isArray(c.region) || c.region.length !== 4) continue;
       const [x1, y1, x2, y2] = c.region.map(Number);
       if (![x1, y1, x2, y2].every(Number.isFinite)) continue;
+      const focuskey = String(c.replyid || (c.id ? `id:${c.id}` : ""));
       const box = document.createElement("div");
       box.className = "mediaregion";
       box.style.left = `${Math.max(0, Math.min(1, x1)) * 100}%`;
       box.style.top = `${Math.max(0, Math.min(1, y1)) * 100}%`;
       box.style.width = `${Math.max(0, Math.min(1, x2 - x1)) * 100}%`;
       box.style.height = `${Math.max(0, Math.min(1, y2 - y1)) * 100}%`;
+      box.setAttribute("data-focuskey", focuskey);
+      if (c.replyid) box.setAttribute("data-replyto", String(c.replyid));
+      box.setAttribute("data-region", `${x1},${y1},${x2},${y2}`);
       const isactive =
         activeregion &&
         Number(activeregion[0]) === Number(x1) &&
@@ -1004,16 +1010,6 @@
         Number(activeregion[3]) === Number(y2);
       if (isactive) matchedactive = true;
       box.classList.toggle("active", !!isactive);
-      box.addEventListener("click", e => {
-        if (!state.commentsopen) return;
-        e.stopPropagation();
-        const target = comments.find(c => regionequals(c?.region, [x1, y1, x2, y2]));
-        activefocuskey = target ? String(target.replyid || (target.id ? `id:${target.id}` : "")) : null;
-        activereplyto = target?.replyid ? String(target.replyid) : null;
-        activeregion = [x1, y1, x2, y2];
-        renderregions(comments);
-        rendercommentpanel(comments);
-      });
       mediaregionlayer.appendChild(box);
     }
     if (activeregion && !matchedactive) drawdraftregion(activeregion);
@@ -1285,25 +1281,76 @@
     clearcommentfocus();
   });
   if (mediaregionlayer) {
+    function focusregionbox(box, comments) {
+      if (!box || !state.commentsopen) return;
+      const rk = String(box.getAttribute("data-region") || "");
+      const parts = rk.split(",").map(Number);
+      const region = parts.length === 4 && parts.every(Number.isFinite) ? parts : null;
+      const fk = String(box.getAttribute("data-focuskey") || "") || null;
+      const rt = String(box.getAttribute("data-replyto") || "") || null;
+      activefocuskey = fk;
+      activereplyto = rt;
+      activeregion = region;
+      renderregions(comments);
+      rendercommentpanel(comments);
+    }
+    function cyclefocusat(clientX, clientY, comments) {
+      if (!mediaregionlayer || !state.commentsopen) return false;
+      const all = document.elementsFromPoint(clientX, clientY) || [];
+      const boxes = all
+        .filter(el => el instanceof Element && el.classList && el.classList.contains("mediaregion"))
+        .filter(el => mediaregionlayer.contains(el));
+      if (!boxes.length) return false;
+      const keys = boxes.map(b => String(b.getAttribute("data-focuskey") || b.getAttribute("data-region") || ""));
+
+      const eps = 4;
+      const sameSpot =
+        regioncycle &&
+        Math.abs(regioncycle.x - clientX) <= eps &&
+        Math.abs(regioncycle.y - clientY) <= eps &&
+        Array.isArray(regioncycle.keys) &&
+        regioncycle.keys.length === keys.length &&
+        regioncycle.keys.every((k, i) => k === keys[i]);
+
+      const nextIndex = sameSpot ? ((regioncycle.idx + 1) % boxes.length) : 0;
+      regioncycle = { x: clientX, y: clientY, keys, idx: nextIndex };
+      focusregionbox(boxes[nextIndex], comments);
+      return true;
+    }
+
     mediaregionlayer.addEventListener("mousedown", e => {
       if (!state.commentsopen || !getsetting("discord_token", "")) return;
       if (e.button !== 0) return;
-      if (e.target !== mediaregionlayer) return;
       const r = mediaregionlayer.getBoundingClientRect();
-      regionselectstart = [e.clientX - r.left, e.clientY - r.top];
-      activereplyto = null;
-      activeregion = null;
-      drawdraftregion(null);
+      const start = [e.clientX - r.left, e.clientY - r.top];
+      regionpointerdown = { clientX: e.clientX, clientY: e.clientY, start };
       e.preventDefault();
     });
     mediaregionlayer.addEventListener("mousemove", e => {
-      if (!regionselectstart) return;
+      if (!regionpointerdown && !regionselectstart) return;
       const r = mediaregionlayer.getBoundingClientRect();
       const current = [e.clientX - r.left, e.clientY - r.top];
+      if (!regionselectstart && regionpointerdown) {
+        const dx = e.clientX - regionpointerdown.clientX;
+        const dy = e.clientY - regionpointerdown.clientY;
+        if (Math.hypot(dx, dy) < 3) return;
+        regionselectstart = regionpointerdown.start;
+        regionpointerdown = null;
+        activereplyto = null;
+        activeregion = null;
+        activefocuskey = null;
+        drawdraftregion(null);
+      }
+      if (!regionselectstart) return;
       const nr = normalizedregionfrompoints(regionselectstart[0], regionselectstart[1], current[0], current[1]);
       drawdraftregion(nr);
     });
     mediaregionlayer.addEventListener("mouseup", e => {
+      if (regionpointerdown) {
+        const handled = cyclefocusat(e.clientX, e.clientY, lightboxcomments);
+        regionpointerdown = null;
+        if (handled) { e.preventDefault(); return; }
+      }
       if (!regionselectstart) return;
       const r = mediaregionlayer.getBoundingClientRect();
       const current = [e.clientX - r.left, e.clientY - r.top];
