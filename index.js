@@ -1318,55 +1318,124 @@
       return true;
     }
 
-    mediaregionlayer.addEventListener("mousedown", e => {
-      if (!state.commentsopen || !getsetting("discord_token", "")) return;
-      if (e.button !== 0) return;
-      const r = mediaregionlayer.getBoundingClientRect();
-      const start = [e.clientX - r.left, e.clientY - r.top];
-      regionpointerdown = { clientX: e.clientX, clientY: e.clientY, start };
-      e.preventDefault();
-    });
-    mediaregionlayer.addEventListener("mousemove", e => {
-      if (!regionpointerdown && !regionselectstart) return;
-      const r = mediaregionlayer.getBoundingClientRect();
-      const current = [e.clientX - r.left, e.clientY - r.top];
-      if (!regionselectstart && regionpointerdown) {
-        const dx = e.clientX - regionpointerdown.clientX;
-        const dy = e.clientY - regionpointerdown.clientY;
-        if (Math.hypot(dx, dy) < 3) return;
-        regionselectstart = regionpointerdown.start;
-        regionpointerdown = null;
-        activereplyto = null;
-        activeregion = null;
-        activefocuskey = null;
+    const regionpointereventz = "PointerEvent" in window;
+    if (regionpointereventz) {
+      mediaregionlayer.addEventListener("pointerdown", e => {
+        if (!state.commentsopen || !getsetting("discord_token", "")) return;
+        if (!e.isPrimary) return;
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        const r = mediaregionlayer.getBoundingClientRect();
+        const start = [e.clientX - r.left, e.clientY - r.top];
+        regionpointerdown = { clientX: e.clientX, clientY: e.clientY, start, pointerId: e.pointerId };
+        try { mediaregionlayer.setPointerCapture(e.pointerId); } catch (_) {}
+        e.preventDefault();
+      }, { passive: false });
+      mediaregionlayer.addEventListener("pointermove", e => {
+        if (!e.isPrimary) return;
+        if (!regionpointerdown && !regionselectstart) return;
+        if (regionpointerdown && e.pointerId !== regionpointerdown.pointerId) return;
+        const r = mediaregionlayer.getBoundingClientRect();
+        const current = [e.clientX - r.left, e.clientY - r.top];
+        if (!regionselectstart && regionpointerdown) {
+          const dx = e.clientX - regionpointerdown.clientX;
+          const dy = e.clientY - regionpointerdown.clientY;
+          if (Math.hypot(dx, dy) < 3) return;
+          regionselectstart = regionpointerdown.start;
+          regionpointerdown = null;
+          activereplyto = null;
+          activeregion = null;
+          activefocuskey = null;
+          drawdraftregion(null);
+        }
+        if (!regionselectstart) return;
+        const nr = normalizedregionfrompoints(regionselectstart[0], regionselectstart[1], current[0], current[1]);
+        drawdraftregion(nr);
+        e.preventDefault();
+      }, { passive: false });
+      function endpointer(e) {
+        if (regionpointerdown && e.pointerId !== regionpointerdown.pointerId) return;
+        if (regionpointerdown) {
+          const handled = cyclefocusat(e.clientX, e.clientY, lightboxcomments);
+          regionpointerdown = null;
+          try { mediaregionlayer.releasePointerCapture(e.pointerId); } catch (_) {}
+          if (handled) { e.preventDefault(); return; }
+        }
+        if (!regionselectstart) return;
+        const r = mediaregionlayer.getBoundingClientRect();
+        const current = [e.clientX - r.left, e.clientY - r.top];
+        const nr = normalizedregionfrompoints(regionselectstart[0], regionselectstart[1], current[0], current[1]);
+        regionselectstart = null;
         drawdraftregion(null);
+        if (!nr) return;
+        activeregion = nr;
+        renderregions(lightboxcomments);
+        rendercommentpanel(lightboxcomments);
+        e.preventDefault();
       }
-      if (!regionselectstart) return;
-      const nr = normalizedregionfrompoints(regionselectstart[0], regionselectstart[1], current[0], current[1]);
-      drawdraftregion(nr);
-    });
-    mediaregionlayer.addEventListener("mouseup", e => {
-      if (regionpointerdown) {
-        const handled = cyclefocusat(e.clientX, e.clientY, lightboxcomments);
+      mediaregionlayer.addEventListener("pointerup", endpointer, { passive: false });
+      mediaregionlayer.addEventListener("pointercancel", () => {
         regionpointerdown = null;
-        if (handled) { e.preventDefault(); return; }
-      }
-      if (!regionselectstart) return;
-      const r = mediaregionlayer.getBoundingClientRect();
-      const current = [e.clientX - r.left, e.clientY - r.top];
-      const nr = normalizedregionfrompoints(regionselectstart[0], regionselectstart[1], current[0], current[1]);
-      regionselectstart = null;
-      drawdraftregion(null);
-      if (!nr) return;
-      activeregion = nr;
-      renderregions(lightboxcomments);
-      rendercommentpanel(lightboxcomments);
-    });
-    mediaregionlayer.addEventListener("mouseleave", () => {
-      if (!regionselectstart) return;
-      regionselectstart = null;
-      drawdraftregion(null);
-    });
+        if (!regionselectstart) return;
+        regionselectstart = null;
+        drawdraftregion(null);
+      }, {passive: true});
+      mediaregionlayer.addEventListener("lostpointercapture", () => {
+        regionpointerdown = null;
+        if (!regionselectstart) return;
+        regionselectstart = null;
+        drawdraftregion(null);
+      }, {passive: true});
+    } else {
+      mediaregionlayer.addEventListener("mousedown", e => {
+        if (!state.commentsopen || !getsetting("discord_token", "")) return;
+        if (e.button !== 0) return;
+        const r = mediaregionlayer.getBoundingClientRect();
+        const start = [e.clientX - r.left, e.clientY - r.top];
+        regionpointerdown = { clientX: e.clientX, clientY: e.clientY, start };
+        e.preventDefault();
+      });
+      mediaregionlayer.addEventListener("mousemove", e => {
+        if (!regionpointerdown && !regionselectstart) return;
+        const r = mediaregionlayer.getBoundingClientRect();
+        const current = [e.clientX - r.left, e.clientY - r.top];
+        if (!regionselectstart && regionpointerdown) {
+          const dx = e.clientX - regionpointerdown.clientX;
+          const dy = e.clientY - regionpointerdown.clientY;
+          if (Math.hypot(dx, dy) < 3) return;
+          regionselectstart = regionpointerdown.start;
+          regionpointerdown = null;
+          activereplyto = null;
+          activeregion = null;
+          activefocuskey = null;
+          drawdraftregion(null);
+        }
+        if (!regionselectstart) return;
+        const nr = normalizedregionfrompoints(regionselectstart[0], regionselectstart[1], current[0], current[1]);
+        drawdraftregion(nr);
+      });
+      mediaregionlayer.addEventListener("mouseup", e => {
+        if (regionpointerdown) {
+          const handled = cyclefocusat(e.clientX, e.clientY, lightboxcomments);
+          regionpointerdown = null;
+          if (handled) { e.preventDefault(); return; }
+        }
+        if (!regionselectstart) return;
+        const r = mediaregionlayer.getBoundingClientRect();
+        const current = [e.clientX - r.left, e.clientY - r.top];
+        const nr = normalizedregionfrompoints(regionselectstart[0], regionselectstart[1], current[0], current[1]);
+        regionselectstart = null;
+        drawdraftregion(null);
+        if (!nr) return;
+        activeregion = nr;
+        renderregions(lightboxcomments);
+        rendercommentpanel(lightboxcomments);
+      });
+      mediaregionlayer.addEventListener("mouseleave", () => {
+        if (!regionselectstart) return;
+        regionselectstart = null;
+        drawdraftregion(null);
+      });
+    }
   }
   if (medianavleft) medianavleft.addEventListener("click", () => steplightboximage(-1));
   if (medianavright) medianavright.addEventListener("click", () => steplightboximage(1));
