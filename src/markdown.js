@@ -1,7 +1,6 @@
-(function () {
-  "use strict";
+"use strict";
 
-  function createmarkdownhelpers(deps) {
+export function mdhelper(deps) {
     const readmedoc = deps.readmedoc;
     const readmenavbtns = deps.readmenavbtns;
     const setsetting = deps.setsetting;
@@ -18,14 +17,14 @@
           out += incode ? "<pre><code>" : "</code></pre>";
           continue;
         }
-        if (incode) { out += `${esc(line)}\n`; continue; }
+        if (incode) {out += `${esc(line)}\n`; continue}
         const h = line.match(/^(#{1,6})\s+(.*)$/);
         if (h) {
           const lvl = h[1].length;
           out += `<h${lvl}>${h[2]}</h${lvl}>`;
           continue;
         }
-        if (!line.trim()) { out += ""; continue; }
+        if (!line.trim()) {out += ""; continue}
         if (line.trim().startsWith("<")) out += line;
         else if (line.includes("<")) out += `<p>${line}</p>`;
         else out += `<p>${esc(line)}</p>`;
@@ -39,7 +38,7 @@
       if (mdcache.has(key)) return mdcache.get(key);
       const islocal = location.hostname === "127.0.0.1" || location.hostname === "localhost";
       const bust = islocal ? `?t=${Date.now()}` : "";
-      const res = await fetch(`${key}${bust}`, { cache: islocal ? "no-store" : "force-cache" });
+      const res = await fetch(`${key}${bust}`, {cache: islocal ? "no-store" : "force-cache"});
       const txt = res.ok ? await res.text() : `# missing\ncould not load ${key}`;
       mdcache.set(key, txt);
       return txt;
@@ -55,8 +54,5 @@
       setsetting("readmedoc", key);
     }
 
-    return { loadmddoc, mdtohtml, showmddoc };
-  }
-
-  globalThis.createmarkdownhelpers = createmarkdownhelpers;
-})();
+  return {loadmddoc, mdtohtml, showmddoc};
+}

@@ -1,8 +1,7 @@
-(function () {
-  "use strict";
+"use strict";
 
-  // Fetches and caches the GitHub / mirror file tree, plus folder listing helpers.
-  function createDriveTree(deps) {
+// requests & caches the guweh.com file tree, and folder list helpers
+export function drivetree(deps) {
     const state = deps.state;
     const rootprefix = deps.rootprefix;
     const cachekey = deps.cachekey;
@@ -21,17 +20,17 @@
         if (!d || !Array.isArray(d.tree) || typeof d.savedat !== "number") return null;
         if (Date.now() - d.savedat > ttlms) return null;
         return d;
-      } catch { return null; }
+      } catch {return null}
     }
     function savecache(data) {
-      try { localStorage.setItem(cachekey, JSON.stringify({ ...data, savedat: Date.now() })); } catch (_) {}
+      try {localStorage.setItem(cachekey, JSON.stringify({...data, savedat: Date.now()}))} catch (_) {}
     }
     function clearcache() {
-      try { localStorage.removeItem(cachekey); } catch (_) {}
+      try {localStorage.removeItem(cachekey)} catch (_) {}
     }
 
     async function mirrorfetchjson(path) {
-      const res = await fetch(`https://mirror.guweh.com/${path}`, { cache: "force-cache" });
+      const res = await fetch(`https://mirror.guweh.com/${path}`, {cache: "force-cache"});
       if (!res.ok) throw new Error(`mirror fetch failed (${res.status})`);
       return await res.json();
     }
@@ -48,20 +47,20 @@
         if (typeof name !== "string" || !name.trim()) continue;
         const p = name.replace(/^\/+/, "");
         if (!p || p.includes("..")) continue;
-        blobs.push({ type: "blob", path: p });
+        blobs.push({type: "blob", path: p });
       }
       for (const name of vidrows) {
         if (typeof name !== "string" || !name.trim()) continue;
         const p = name.replace(/^\/+/, "");
         if (!p || p.includes("..")) continue;
-        blobs.push({ type: "blob", path: p });
+        blobs.push({type: "blob", path: p});
       }
-      return { tree: blobs, branch: "mirror", truncated: false };
+      return {tree: blobs, branch: "mirror", truncated: false};
     }
 
     async function githubfetch(path) {
       return (await fetch(`https://api.github.com${path}`,
-        { headers: { Accept: "application/vnd.github+json" } })).json();
+        {headers: {Accept: "application/vnd.github+json"}})).json();
     }
     async function fetchtreefresh() {
       const meta = await githubfetch(`/repos/ssoggycat/drive-3`);
@@ -71,9 +70,9 @@
       const tree = await githubfetch(`/repos/ssoggycat/drive-3/git/trees/${gitcommit.tree.sha}?recursive=1`);
       const filtered = (Array.isArray(tree.tree) ? tree.tree : [])
         .filter((x) => x.path === rootprefix || x.path.startsWith(`${rootprefix}/`))
-        .map((x) => ({ ...x, path: x.path.slice(`${rootprefix}/`.length) }))
+        .map((x) => ({...x, path: x.path.slice(`${rootprefix}/`.length)}))
         .filter((x) => x.path && !x.path.split("/").some((seg) => seg.startsWith(".")));
-      return { tree: filtered, branch: state.branch, truncated: !!tree.truncated };
+      return {tree: filtered, branch: state.branch, truncated: !!tree.truncated};
     }
 
     function listchildren(prefix) {
@@ -86,8 +85,8 @@
         const parts = rel.split("/").filter(Boolean);
         const name = parts[0];
         if (!name || name.startsWith(".")) continue;
-        if (parts.length === 1) out.set(name, { kind: item.type === "tree" ? "folder" : "file", name, path: item.path });
-        else if (!out.has(name)) out.set(name, { kind: "folder", name, path: p ? `${p}/${name}` : name });
+        if (parts.length === 1) out.set(name, {kind: item.type === "tree" ? "folder" : "file", name, path: item.path});
+        else if (!out.has(name)) out.set(name, {kind: "folder", name, path: p ? `${p}/${name}` : name});
       }
       return [...out.values()].sort((a, b) => a.kind !== b.kind ? (a.kind === "folder" ? -1 : 1) : a.name.localeCompare(b.name));
     }
@@ -125,13 +124,13 @@
       const stoploading = startloading();
       try {
         let fresh = null;
-        try { fresh = await fetchtreemirror(); } catch (_) {}
+        try {fresh = await fetchtreemirror()} catch (_) {}
         if (!fresh) fresh = await fetchtreefresh();
         stoploading();
         state.tree = fresh.tree;
         state.branch = fresh.branch;
         state.truncated = fresh.truncated;
-        savecache({ tree: state.tree, branch: state.branch, truncated: state.truncated });
+        savecache({tree: state.tree, branch: state.branch, truncated: state.truncated});
         setrefreshtime(0);
         deps.resetPathAndRefreshNav();
         deps.rendergrid();
@@ -142,12 +141,9 @@
       }
     }
 
-    return {
-      clearcache, listchildren,
-      loadcache, loadtree,
-      savecache, setrefreshtime
-    };
-  }
-
-  globalThis.createDriveTree = createDriveTree;
-})();
+  return {
+    clearcache, listchildren,
+    loadcache, loadtree,
+    savecache, setrefreshtime
+  };
+}

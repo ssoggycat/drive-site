@@ -1,8 +1,7 @@
-(function () {
-  "use strict";
+"use strict";
 
-  // DevTools width heuristic + Discord OAuth UI and token exchange.
-  function createDriveDiscord(deps) {
+// discord oauth
+export function drivediscord(deps) {
     const esc = deps.esc;
     const setsetting = deps.setsetting;
     const getsetting = deps.getsetting;
@@ -15,38 +14,6 @@
     const discordmenulogout = deps.discordmenulogout;
     const discordavatardefaulthtml = deps.discordavatardefaulthtml;
     const updateloginhint = deps.updateloginhint;
-
-    const devtools = {
-      isopen: false,
-      orientation: undefined
-    };
-    const threshold = 170;
-
-    function helloimyourneighbor() {
-      try {
-        new Audio("assets/audio/hello.mp3").play();
-      } catch {}
-    }
-    const emitevent = (isopen, orientation) => {
-      globalThis.dispatchEvent(new globalThis.CustomEvent("devtoolschange", { detail: { isopen, orientation } }));
-      if (isopen) { helloimyourneighbor(); }
-    };
-    const main = ({ emitevents = true } = {}) => {
-      const widththresh = globalThis.outerWidth - globalThis.innerWidth > threshold;
-      const heightthresh = globalThis.outerHeight - globalThis.innerHeight > threshold;
-      const orientation = widththresh ? "vertical" : "horizontal";
-      if (!(heightthresh && widththresh) && ((globalThis.Firebug && globalThis.Firebug.chrome && globalThis.Firebug.chrome.isInitialized) || widththresh || heightthresh)) {
-        if ((!devtools.isopen || devtools.orientation !== orientation) && emitevents) { emitevent(true, orientation); }
-        devtools.isopen = true;
-        devtools.orientation = orientation;
-      } else {
-        if (devtools.isopen && emitevents) { emitevent(false, undefined); }
-        devtools.isopen = false;
-        devtools.orientation = undefined;
-      }
-    };
-    main({ emitevents: false });
-    setInterval(main, 500);
 
     function discordloggedin() {
       return !!getsetting("discord_user", null) || !!getsetting("discord_token", "") || !!getsetting("discord_code", "");
@@ -86,7 +53,7 @@
       updatediscordmenu();
       updateloginhint();
     }
-    function builddiscordauthorizeurl() {
+    function discordauthurl() {
       const base = "https://discord.com/oauth2/authorize";
       const redirect = `${location.origin}/index.html`;
       const st = Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2);
@@ -102,7 +69,7 @@
       return `${base}?${qs.toString()}`;
     }
     function opendiscordpopup() {
-      const url = builddiscordauthorizeurl();
+      const url = discordauthurl();
       const w = 480, h = 720;
       const left = Math.max(0, Math.floor((window.screen.width - w) / 2));
       const top = Math.max(0, Math.floor((window.screen.height - h) / 2));
@@ -123,12 +90,12 @@
       }
       const frompopup = !!(window.opener && window.opener !== window);
       if (!frompopup) {
-        try { setsetting("discord_code", code); } catch (_) {}
+        try {setsetting("discord_code", code);} catch (_) {}
         updatediscordmenu();
       }
       if (frompopup) {
-        try { window.opener.postMessage({ type: "discord_oauth_code", code }, location.origin); } catch (_) {}
-        window.setTimeout(() => { try { window.close(); } catch (_) {} }, 60);
+        try {window.opener.postMessage({type: "discord_oauth_code", code}, location.origin)} catch (_) {}
+        window.setTimeout(() => {try {window.close()} catch (_) {}}, 60);
       }
       sp.delete("code"); sp.delete("state");
       history.replaceState({}, "", `${location.pathname}${sp.toString() ? `?${sp.toString()}` : ""}${location.hash || ""}`);
@@ -144,12 +111,12 @@
           code: String(code),
           redirect_uri: String(redirect || "")
         });
-        const res = await fetch(`${commentsliveapibase}/me?${qp.toString()}`, { cache: "no-store" });
+        const res = await fetch(`${commentsliveapibase}/me?${qp.toString()}`, {cache: "no-store"});
         if (!res.ok) return;
         const j = await res.json();
         if (!j || typeof j !== "object") return;
         if (typeof j.username === "string" && typeof j.avatar === "string") {
-          setsetting("discord_user", { username: j.username, avatar: j.avatar });
+          setsetting("discord_user", {username: j.username, avatar: j.avatar});
           if (typeof j.token === "string" && j.token) setsetting("discord_token", j.token);
           setsetting("discord_code", "");
           updatediscordavatar();
@@ -165,7 +132,7 @@
       discordmenu.hidden = !discordmenu.hidden;
     }
 
-    function wireDiscordUi(extra) {
+    function wirediscordui(extra) {
       const medialightbox = extra.medialightbox;
       const onLightboxCommentsRefresh = extra.onLightboxCommentsRefresh;
 
@@ -189,7 +156,7 @@
           loginhint.hidden = false;
           loginhint.classList.remove("fade");
         });
-        discordavatarbutton.addEventListener("mouseleave", () => { if (loginhint) loginhint.hidden = true; });
+        discordavatarbutton.addEventListener("mouseleave", () => {if (loginhint) loginhint.hidden = true});
       }
       if (discordmenulogout)
         discordmenulogout.addEventListener("click", () => {
@@ -214,20 +181,13 @@
       });
     }
 
-    return {
-      builddiscordauthorizeurl,
-      closediscordmenu,
-      discordloggedin,
-      getdiscorduser,
-      handlediscordoauthcallbackifpresent,
-      opendiscordpopup,
-      resolvediscorduser,
-      togglediscordmenu,
-      updatediscordavatar,
-      updatediscordmenu,
-      wireDiscordUi
-    };
-  }
+  return {
+    discordauthurl, closediscordmenu,
+    discordloggedin, getdiscorduser,
+    handlediscordoauthcallbackifpresent,
+    opendiscordpopup, resolvediscorduser,
+    togglediscordmenu, updatediscordavatar,
+    updatediscordmenu, wirediscordui
+  };
 
-  globalThis.createDriveDiscord = createDriveDiscord;
-})();
+}

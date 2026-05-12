@@ -1,9 +1,7 @@
-(function () {
-  "use strict";
+"use strict";
 
-  function getapi() {
-    return globalThis.meow || null;
-  }
+export function contextmenu(getapipls) {
+  function getapipls() {return getapipls() || null}
   const drivecontent = document.querySelector(".drivecontent");
   const mediacontent = document.querySelector(".mediacontent");
 
@@ -20,7 +18,7 @@
     const h = String(location.hash || "");
     if (!h || h === "#") return "";
     const raw = h.startsWith("#") ? h.slice(1) : h;
-    try { return decodeURIComponent(raw); } catch { return ""; }
+    try {return decodeURIComponent(raw)} catch {return ""}
   }
 
   function closestfilecard(el) {
@@ -35,7 +33,7 @@
   }
 
   function inferkind(filename) {
-    const api = getapi();
+    const api = getapipls();
     const name = String(filename || "");
     const isimg = !!api?.imageext?.test?.(name);
     const isvid = !!api?.videoext?.test?.(name);
@@ -51,8 +49,6 @@
     };
   }
 
-  /////////////// lowercase for all below ///////////////////////
-
   function ensuremenu() {
     let wrap = document.querySelector(".contextmenuwrap");
     if (wrap) return wrap;
@@ -64,7 +60,7 @@
     wrap.querySelector(".contextmenubackdrop")?.addEventListener("click", closemenu);
     document.addEventListener("keydown", e => {if (e.key === "Escape") closemenu()});
     window.addEventListener("resize", () => closemenu());
-    window.addEventListener("scroll", () => closemenu(), { passive: true, capture: true });
+    window.addEventListener("scroll", () => closemenu(), {passive: true, capture: true});
     return wrap;
   }
 
@@ -105,7 +101,7 @@
   const blobstuff = new Map();
   async function fetchblob(url) {
     if (blobstuff.has(url)) return blobstuff.get(url);
-    const res = await fetch(url, { cache: "force-cache" });
+    const res = await fetch(url, {cache: "force-cache"});
     if (!res.ok) throw new Error(`fetch failed (${res.status})`);
     const b = await res.blob();
     blobstuff.set(url, b);
@@ -117,7 +113,7 @@
       const blob = await fetchblob(url);
       const type = blob.type || "application/octet-stream";
       if (navigator.clipboard && globalThis.ClipboardItem) {
-        await navigator.clipboard.write([new ClipboardItem({ [type]: blob })]);
+        await navigator.clipboard.write([new ClipboardItem({[type]: blob})]);
         return;
       }
       if (allowurlfallback && navigator.clipboard?.writeText) {
@@ -141,8 +137,8 @@
     alert(`${kindlabel} couldn't be copied.`);
   }
 
-  function openmenu({ x, y, filepath, inpreview }) {
-    const api = getapi();
+  function openmenu({x, y, filepath, inpreview}) {
+    const api = getapipls();
     if (!api || !filepath) {
       return;
     }
@@ -212,7 +208,7 @@
     if (!filepath) return;
     e.preventDefault();
     e.stopPropagation();
-    openmenu({ x: e.clientX, y: e.clientY, filepath, inpreview: !!opts.inpreview });
+    openmenu({x: e.clientX, y: e.clientY, filepath, inpreview: !!opts.inpreview});
   }
 
   // right click override
@@ -220,10 +216,10 @@
     drivecontent.addEventListener("contextmenu", e => {
       const card = closestfilecard(e.target);
       if (!card) return;
-      openfromevent(e, { inpreview: false });
-    }, { capture: true });
+      openfromevent(e, {inpreview: false});
+    }, {capture: true});
 
-    // OR a long press for mobile? haven't tested if this works
+    // OR a long press for mobile? haven't tested if this works <- it works
     let holdtimer = 0;
     let holdstart = null;
 
@@ -238,7 +234,7 @@
       if (!card) return;
       if (e.pointerType === "mouse") return;
       clearhold();
-      holdstart = { x: e.clientX, y: e.clientY, target: e.target };
+      holdstart = {x: e.clientX, y: e.clientY, target: e.target};
       holdtimer = window.setTimeout(() => {
         holdtimer = 0;
         const c = closestfilecard(holdstart?.target);
@@ -271,11 +267,10 @@
     }, {capture: true});
   }
 
-  globalThis.addEventListener("drivecontext:open", e => {
+  window.addEventListener("drivecontext:open", e => {
     const d = e?.detail || {};
     const filepath = String(d.filepath || "");
     if (!filepath) return;
     openmenu({x: Number(d.x || 0), y: Number(d.y || 0), filepath, inpreview: false});
   });
-
-})();
+}

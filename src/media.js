@@ -1,8 +1,8 @@
-(function () {
-  "use strict";
+"use strict";
 
-  // Lightbox preview, comment threads, and image region selection / overlays.
-  function createDriveMedia(deps) {
+// preview, comment threads and image region selection/overlays
+export function drivemedia(deps) {
+
     const state = deps.state;
     const getsetting = deps.getsetting;
     const setsetting = deps.setsetting;
@@ -49,6 +49,8 @@
     let regionpointerdown = null;
     let regioncycle = null;
 
+    /*//////////////////////////////////////////////////////////////////////*/
+
     function updatemediainfo(pathname, extra = {}) {
       if (!mediainfo) return;
       const file = basename(pathname) || pathname;
@@ -79,11 +81,11 @@
         commentsindexpromise = (async () => {
           let j = null;
           try {
-            const res = await fetch(commentsarchiveurl, { cache: "force-cache" });
+            const res = await fetch(commentsarchiveurl, {cache: "force-cache"});
             if (res.ok) j = await res.json();
           } catch (_) {}
           if (!j) {
-            const res = await fetch(commentsindexapi, { cache: "force-cache" });
+            const res = await fetch(commentsindexapi, {cache: "force-cache"});
             if (!res.ok) return new Map();
             j = await res.json();
           }
@@ -100,14 +102,16 @@
       return commentsindexbyfile;
     }
 
+    /*//////////////////////////////////////////////////////////////////////*/
+
     async function fetchlivecomments(filename) {
       if (!commentsliveapibase || !filename) return [];
       try {
-        const res = await fetch(`${commentsliveapibase}/comments?file=${encodeURIComponent(filename)}`, { cache: "no-store" });
+        const res = await fetch(`${commentsliveapibase}/comments?file=${encodeURIComponent(filename)}`, {cache: "no-store"});
         if (!res.ok) return [];
         const j = await res.json();
         return Array.isArray(j?.comments) ? j.comments : [];
-      } catch { return []; }
+      } catch {return []}
     }
     async function fetchcomments(filename) {
       if (!filename) return [];
@@ -121,20 +125,20 @@
             const replyingto = (typeof c?.replyingto === "string" && c.replyingto) ? c.replyingto : null;
             const region = Array.isArray(c?.region) && c.region.length === 4 ? c.region.map(Number) : null;
             const replyid = typeof c?.replyid === "string" && c.replyid ? c.replyid : null;
-            return { ...c, replyingto, region, replyid };
+            return {...c, replyingto, region, replyid};
           })
           .sort((a, b) => Number(a?.id || 0) - Number(b?.id || 0));
         commentscache.set(filename, rows);
         return rows;
-      } catch { return []; }
+      } catch {return []}
     }
 
     function formattime(ms) {
       const n = Number(ms);
       if (!Number.isFinite(n)) return "";
       try {
-        return new Date(n).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
-      } catch { return ""; }
+        return new Date(n).toLocaleDateString(undefined, {year: "numeric", month: "long", day: "numeric"});
+      } catch {return ""}
     }
 
     function regionequals(a, b) {
@@ -205,23 +209,23 @@
           let matched = false;
           while (stack.length) {
             const cur = stack.pop();
-            if (regionequals(cur?.region, activeregion)) { matched = true; break; }
+            if (regionequals(cur?.region, activeregion)) {matched = true; break}
             const childkey = cur?.replyid ? String(cur.replyid) : String(cur?.id || "");
             const kids = childkey ? (byparent.get(childkey) || []) : [];
             for (let i = kids.length - 1; i >= 0; i--) stack.push(kids[i]);
           }
-          if (matched) { focusedchainroot = root; break; }
+          if (matched) {focusedchainroot = root; break}
         }
       }
       for (const root of roots) {
         const chain = [];
-        const stack = [{ node: root, depth: 0 }];
+        const stack = [{node: root, depth: 0}];
         while (stack.length) {
           const cur = stack.pop();
           chain.push(cur);
           const childkey = cur.node?.replyid ? String(cur.node.replyid) : String(cur.node?.id || "");
           const kids = childkey ? (byparent.get(childkey) || []) : [];
-          for (let i = kids.length - 1; i >= 0; i--) stack.push({ node: kids[i], depth: cur.depth + 1 });
+          for (let i = kids.length - 1; i >= 0; i--) stack.push({node: kids[i], depth: cur.depth + 1});
         }
 
         const chainwrap = document.createElement("div");
@@ -243,6 +247,7 @@
           const isdiscord = src.includes("discordapp.com") || src.includes("discord.com");
           const badge = isgoogle ? "assets/svg/drive.svg" : isdiscord ? "assets/svg/discord.svg" : "";
 
+          // comment template
           card.innerHTML =
             `<div class="mediacommentrow">` +
             `<div class="mediacommentpfpwrap">` +
@@ -274,6 +279,7 @@
             const composer = document.createElement("div");
             composer.className = "mediacomment commentcomposerwrap";
 
+            // reply prompt template
             composer.innerHTML =
               `<textarea class="commentcompose" rows="3" placeholder="reply to a comment.."></textarea>` +
               `<div class="commentcomposeactions">` +
@@ -298,7 +304,7 @@
                 };
 
                 const res = await fetch(`${commentsliveapibase}/comments`, {
-                  method: "POST", headers: { "content-type": "application/json" },
+                  method: "POST", headers: {"content-type": "application/json"},
                   body: JSON.stringify(body)
                 });
 
@@ -323,6 +329,7 @@
         const composer = document.createElement("div");
         composer.className = "mediacomment commentcomposerwrap regioncomposer";
 
+        // region comment prompt template
         composer.innerHTML =
           `<textarea class="commentcompose" rows="3" placeholder="write a comment for this region.."></textarea>` +
           `<div class="commentcomposeactions">` +
@@ -346,7 +353,7 @@
               region: activeregion || null
             };
             const res = await fetch(`${commentsliveapibase}/comments`, {
-              method: "POST", headers: { "content-type": "application/json" },
+              method: "POST", headers: {"content-type": "application/json"},
               body: JSON.stringify(body)
             });
             if (res.ok) {
@@ -460,7 +467,7 @@
       activeregion = null;
       const siblings = listchildren(state.cwd)
         .filter(x => x.kind === "file" && imageext.test(x.name))
-        .map(x => ({ url: rawurl(x.path), path: x.path, name: x.name }));
+        .map(x => ({url: rawurl(x.path), path: x.path, name: x.name}));
       lightboxnavitems = siblings;
       lightboxnavindex = siblings.findIndex(x => x.path === pathname);
       const shownav = !video && siblings.length > 1 && lightboxnavindex !== -1;
@@ -483,7 +490,7 @@
             height: v.videoHeight || 0,
             duration: v.duration || 0
           });
-        }, { once: true });
+        }, {once: true});
         v.src = url;
         v.autoplay = true;
         if (v.readyState >= 1) {
@@ -494,7 +501,7 @@
           });
         }
         mediacontent.appendChild(v);
-        if (medicomments) { medicomments.hidden = true; medicommentslist.innerHTML = ""; }
+        if (medicomments) {medicomments.hidden = true; medicommentslist.innerHTML = ""}
       } else {
         const img = document.createElement("img");
         img.addEventListener("load", () => {
@@ -503,7 +510,8 @@
             height: img.naturalHeight || 0
           });
           renderregions(lightboxcomments);
-        }, { once: true });
+        }, {once: true});
+
         img.src = url;
         img.alt = "";
         mediacontent.appendChild(img);
@@ -520,10 +528,10 @@
         }
         renderregions(comments);
       }
+
       medialightbox.hidden = false;
       document.body.style.overflow = "hidden";
-      requestAnimationFrame(() =>
-        medialightbox.classList.add("medialightboxvisible"));
+      requestAnimationFrame(() => medialightbox.classList.add("medialightboxvisible"));
     }
 
     function steplightboximage(delta) {
@@ -545,7 +553,7 @@
       rendercommentpanel(lightboxcomments);
     }
 
-    function hasCommentFocus() {
+    function hascommentfocus() {
       return !!(activefocuskey || activereplyto || activeregion);
     }
 
@@ -553,11 +561,13 @@
       if (!mediacontent || !medialightbox) return;
       medialightbox.classList.remove("medialightboxvisible");
       window.setTimeout(() => {
+
         medialightbox.hidden = true;
         mediacontent.innerHTML = "";
         if (mediaregionlayer) mediaregionlayer.innerHTML = "";
         if (medicommentslist) medicommentslist.innerHTML = "";
         if (medicomments) medicomments.hidden = true;
+
         lightboxfilename = "";
         lightboxcomments = [];
         lightboximg = null;
@@ -567,18 +577,20 @@
         activefocuskey = null;
         activeregion = null;
         regionselectstart = null;
+
         sethashfilepath("");
         document.body.style.overflow = "";
+
       }, 220);
     }
 
-    function refreshLightboxCommentsUi() {
+    function refreshcoomentui() {
       if (!medialightbox || medialightbox.hidden) return;
       rendercommentpanel(lightboxcomments);
       renderregions(lightboxcomments);
     }
 
-    function relayoutRegionsIfLightboxOpen() {
+    function relayoutregions() {
       if (!medialightbox || medialightbox.hidden) return;
       renderregions(lightboxcomments);
     }
@@ -615,9 +627,9 @@
           regioncycle.keys.length === keys.length &&
           regioncycle.keys.every((k, i) => k === keys[i]);
 
-        const nextIndex = sameSpot ? ((regioncycle.idx + 1) % boxes.length) : 0;
-        regioncycle = { x: clientX, y: clientY, keys, idx: nextIndex };
-        focusregionbox(boxes[nextIndex], comments);
+        const nextindex = sameSpot ? ((regioncycle.idx + 1) % boxes.length) : 0;
+        regioncycle = {x: clientX, y: clientY, keys, idx: nextindex};
+        focusregionbox(boxes[nextindex], comments);
         return true;
       }
 
@@ -629,10 +641,10 @@
           if (e.pointerType === "mouse" && e.button !== 0) return;
           const r = mediaregionlayer.getBoundingClientRect();
           const start = [e.clientX - r.left, e.clientY - r.top];
-          regionpointerdown = { clientX: e.clientX, clientY: e.clientY, start, pointerId: e.pointerId };
-          try { mediaregionlayer.setPointerCapture(e.pointerId); } catch (_) {}
+          regionpointerdown = {clientX: e.clientX, clientY: e.clientY, start, pointerId: e.pointerId};
+          try {mediaregionlayer.setPointerCapture(e.pointerId)} catch (_) {}
           e.preventDefault();
-        }, { passive: false });
+        }, {passive: false});
         mediaregionlayer.addEventListener("pointermove", e => {
           if (!e.isPrimary) return;
           if (!regionpointerdown && !regionselectstart) return;
@@ -650,18 +662,19 @@
             activefocuskey = null;
             drawdraftregion(null);
           }
+
           if (!regionselectstart) return;
           const nr = normalizedregionfrompoints(regionselectstart[0], regionselectstart[1], current[0], current[1]);
           drawdraftregion(nr);
           e.preventDefault();
-        }, { passive: false });
+        }, {passive: false});
         function endpointer(e) {
           if (regionpointerdown && e.pointerId !== regionpointerdown.pointerId) return;
           if (regionpointerdown) {
             const handled = cyclefocusat(e.clientX, e.clientY, lightboxcomments);
             regionpointerdown = null;
-            try { mediaregionlayer.releasePointerCapture(e.pointerId); } catch (_) {}
-            if (handled) { e.preventDefault(); return; }
+            try {mediaregionlayer.releasePointerCapture(e.pointerId)} catch (_) {}
+            if (handled) {e.preventDefault(); return}
           }
           if (!regionselectstart) return;
           const r = mediaregionlayer.getBoundingClientRect();
@@ -675,26 +688,26 @@
           rendercommentpanel(lightboxcomments);
           e.preventDefault();
         }
-        mediaregionlayer.addEventListener("pointerup", endpointer, { passive: false });
+        mediaregionlayer.addEventListener("pointerup", endpointer, {passive: false});
         mediaregionlayer.addEventListener("pointercancel", () => {
           regionpointerdown = null;
           if (!regionselectstart) return;
           regionselectstart = null;
           drawdraftregion(null);
-        }, { passive: true });
+        }, {passive: true});
         mediaregionlayer.addEventListener("lostpointercapture", () => {
           regionpointerdown = null;
           if (!regionselectstart) return;
           regionselectstart = null;
           drawdraftregion(null);
-        }, { passive: true });
+        }, {passive: true});
       } else {
         mediaregionlayer.addEventListener("mousedown", e => {
           if (!state.commentsopen || !getsetting("discord_token", "")) return;
           if (e.button !== 0) return;
           const r = mediaregionlayer.getBoundingClientRect();
           const start = [e.clientX - r.left, e.clientY - r.top];
-          regionpointerdown = { clientX: e.clientX, clientY: e.clientY, start };
+          regionpointerdown = {clientX: e.clientX, clientY: e.clientY, start};
           e.preventDefault();
         });
         mediaregionlayer.addEventListener("mousemove", e => {
@@ -702,15 +715,18 @@
           const r = mediaregionlayer.getBoundingClientRect();
           const current = [e.clientX - r.left, e.clientY - r.top];
           if (!regionselectstart && regionpointerdown) {
+
             const dx = e.clientX - regionpointerdown.clientX;
             const dy = e.clientY - regionpointerdown.clientY;
             if (Math.hypot(dx, dy) < 3) return;
+
             regionselectstart = regionpointerdown.start;
             regionpointerdown = null;
             activereplyto = null;
             activeregion = null;
             activefocuskey = null;
             drawdraftregion(null);
+
           }
           if (!regionselectstart) return;
           const nr = normalizedregionfrompoints(regionselectstart[0], regionselectstart[1], current[0], current[1]);
@@ -720,7 +736,7 @@
           if (regionpointerdown) {
             const handled = cyclefocusat(e.clientX, e.clientY, lightboxcomments);
             regionpointerdown = null;
-            if (handled) { e.preventDefault(); return; }
+            if (handled) {e.preventDefault(); return}
           }
           if (!regionselectstart) return;
           const r = mediaregionlayer.getBoundingClientRect();
@@ -741,18 +757,12 @@
       }
     }
 
-    return {
-      clearcommentfocus,
-      closelightbox,
-      hasCommentFocus,
-      openlightbox,
-      refreshLightboxCommentsUi,
-      relayoutRegionsIfLightboxOpen,
-      rendercommentpanel,
-      renderregions,
-      steplightboximage
-    };
-  }
+  return {
+    clearcommentfocus, closelightbox,
+    hascommentfocus, openlightbox,
+    refreshcoomentui, relayoutregions,
+    rendercommentpanel, renderregions,
+    steplightboximage
+  };
 
-  globalThis.createDriveMedia = createDriveMedia;
-})();
+}
