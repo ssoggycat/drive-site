@@ -15,15 +15,14 @@ export function drivemedia(deps) {
     const videoext = deps.videoext;
     const rawurl = deps.rawurl;
     const listchildren = deps.listchildren;
-    const sethashfilepath = deps.sethashfilepath;
-    const updateloginhint = deps.updateloginhint;
+    const sethash = deps.sethash;
+    const hidehint = deps.hidehint;
 
     const commentsarchiveurl = deps.commentsarchiveurl;
     const commentsindexapi = deps.commentsindexapi;
-    const commentsliveapibase = deps.commentsliveapibase;
+    const commentslivebase = deps.commentslivebase;
 
     const medialightbox = deps.medialightbox;
-    const mediabox = deps.mediabox;
     const mediabackdrop = deps.mediabackdrop;
     const mediaclose = deps.mediaclose;
     const mediacontent = deps.mediacontent;
@@ -105,9 +104,9 @@ export function drivemedia(deps) {
     /*//////////////////////////////////////////////////////////////////////*/
 
     async function fetchlivecomments(filename) {
-      if (!commentsliveapibase || !filename) return [];
+      if (!commentslivebase || !filename) return [];
       try {
-        const res = await fetch(`${commentsliveapibase}/comments?file=${encodeURIComponent(filename)}`, {cache: "no-store"});
+        const res = await fetch(`${commentslivebase}/comments?file=${encodeURIComponent(filename)}`, {cache: "no-store"});
         if (!res.ok) return [];
         const j = await res.json();
         return Array.isArray(j?.comments) ? j.comments : [];
@@ -156,12 +155,12 @@ export function drivemedia(deps) {
         medicomments.hidden = true;
         medicommentslist.innerHTML = "";
         activereplyto = null; activefocuskey = null;
-        activeregion = null; updateloginhint();
+        activeregion = null; hidehint();
         return;
       }
       medicomments.hidden = false;
       medicommentslist.innerHTML = "";
-      updateloginhint();
+      hidehint();
 
       const loggedin = !!getsetting("discord_token", "");
       comments = (Array.isArray(comments) ? comments : []).filter(c => (c?.plain || "").trim().length > 0);
@@ -292,7 +291,7 @@ export function drivemedia(deps) {
               const text = textarea.value.trim();
               if (!text) return;
               const token = getsetting("discord_token", "");
-              if (!commentsliveapibase || !token) return;
+              if (!commentslivebase || !token) return;
               postbtn.disabled = true;
               try {
 
@@ -303,7 +302,7 @@ export function drivemedia(deps) {
                   region: activeregion || null
                 };
 
-                const res = await fetch(`${commentsliveapibase}/comments`, {
+                const res = await fetch(`${commentslivebase}/comments`, {
                   method: "POST", headers: {"content-type": "application/json"},
                   body: JSON.stringify(body)
                 });
@@ -343,7 +342,7 @@ export function drivemedia(deps) {
           const text = textarea.value.trim();
           if (!text) return;
           const token = getsetting("discord_token", "");
-          if (!commentsliveapibase || !token) return;
+          if (!commentslivebase || !token) return;
           postbtn.disabled = true;
           try {
             const body = {
@@ -352,7 +351,7 @@ export function drivemedia(deps) {
               replyingto: activereplyto || null,
               region: activeregion || null
             };
-            const res = await fetch(`${commentsliveapibase}/comments`, {
+            const res = await fetch(`${commentslivebase}/comments`, {
               method: "POST", headers: {"content-type": "application/json"},
               body: JSON.stringify(body)
             });
@@ -461,7 +460,7 @@ export function drivemedia(deps) {
       updatemediainfo(pathname);
       const filename = pathname.split("/").pop() || "";
       lightboxfilename = filename;
-      sethashfilepath(pathname);
+      sethash(pathname);
       activereplyto = null;
       activefocuskey = null;
       activeregion = null;
@@ -553,7 +552,7 @@ export function drivemedia(deps) {
       rendercommentpanel(lightboxcomments);
     }
 
-    function hascommentfocus() {
+    function hasfocus() {
       return !!(activefocuskey || activereplyto || activeregion);
     }
 
@@ -578,19 +577,19 @@ export function drivemedia(deps) {
         activeregion = null;
         regionselectstart = null;
 
-        sethashfilepath("");
+        sethash("");
         document.body.style.overflow = "";
 
       }, 220);
     }
 
-    function refreshcoomentui() {
+    function refreshcomments() {
       if (!medialightbox || medialightbox.hidden) return;
       rendercommentpanel(lightboxcomments);
       renderregions(lightboxcomments);
     }
 
-    function relayoutregions() {
+    function relayout() {
       if (!medialightbox || medialightbox.hidden) return;
       renderregions(lightboxcomments);
     }
@@ -759,8 +758,8 @@ export function drivemedia(deps) {
 
   return {
     clearcommentfocus, closelightbox,
-    hascommentfocus, openlightbox,
-    refreshcoomentui, relayoutregions,
+    hasfocus, openlightbox,
+    refreshcomments, relayout,
     rendercommentpanel, renderregions,
     steplightboximage
   };

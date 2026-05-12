@@ -5,15 +5,15 @@ export function drivediscord(deps) {
     const esc = deps.esc;
     const setsetting = deps.setsetting;
     const getsetting = deps.getsetting;
-    const commentsliveapibase = deps.commentsliveapibase;
+    const commentslivebase = deps.commentslivebase;
     const loginhint = deps.loginhint;
     const discordavatarbutton = deps.discordavatarbutton;
     const discordmenu = deps.discordmenu;
     const discordmenuavatar = deps.discordmenuavatar;
     const discordmenuname = deps.discordmenuname;
     const discordmenulogout = deps.discordmenulogout;
-    const discordavatardefaulthtml = deps.discordavatardefaulthtml;
-    const updateloginhint = deps.updateloginhint;
+    const pfpdefault = deps.pfpdefault;
+    const hidehint = deps.hidehint;
 
     function discordloggedin() {
       return !!getsetting("discord_user", null) || !!getsetting("discord_token", "") || !!getsetting("discord_code", "");
@@ -44,14 +44,14 @@ export function drivediscord(deps) {
     function updatediscordavatar() {
       const u = getdiscorduser();
       if (u?.avatar) setdiscordavatarurl(u.avatar);
-      else if (discordavatarbutton) discordavatarbutton.innerHTML = discordavatardefaulthtml;
+      else if (discordavatarbutton) discordavatarbutton.innerHTML = pfpdefault;
       if (discordavatarbutton) {
         const t = discordloggedin() ? "view your profile" : "log in with discord";
         discordavatarbutton.title = t;
         discordavatarbutton.setAttribute("aria-label", t);
       }
       updatediscordmenu();
-      updateloginhint();
+      hidehint();
     }
     function discordauthurl() {
       const base = "https://discord.com/oauth2/authorize";
@@ -101,7 +101,7 @@ export function drivediscord(deps) {
       history.replaceState({}, "", `${location.pathname}${sp.toString() ? `?${sp.toString()}` : ""}${location.hash || ""}`);
     }
     async function resolvediscorduser() {
-      if (!commentsliveapibase) return;
+      if (!commentslivebase) return;
       if (getsetting("discord_token", "") && getdiscorduser()) return;
       const code = getsetting("discord_code", "");
       if (!code) return;
@@ -111,7 +111,7 @@ export function drivediscord(deps) {
           code: String(code),
           redirect_uri: String(redirect || "")
         });
-        const res = await fetch(`${commentsliveapibase}/me?${qp.toString()}`, {cache: "no-store"});
+        const res = await fetch(`${commentslivebase}/me?${qp.toString()}`, {cache: "no-store"});
         if (!res.ok) return;
         const j = await res.json();
         if (!j || typeof j !== "object") return;
@@ -132,9 +132,9 @@ export function drivediscord(deps) {
       discordmenu.hidden = !discordmenu.hidden;
     }
 
-    function wirediscordui(extra) {
+    function wireui(extra) {
       const medialightbox = extra.medialightbox;
-      const onLightboxCommentsRefresh = extra.onLightboxCommentsRefresh;
+      const oncomments = extra.oncomments;
 
       if (discordavatarbutton)
         discordavatarbutton.addEventListener("click", e => {
@@ -165,7 +165,7 @@ export function drivediscord(deps) {
           setsetting("discord_user", null);
           updatediscordavatar();
           closediscordmenu();
-          if (medialightbox && !medialightbox.hidden) onLightboxCommentsRefresh();
+          if (medialightbox && !medialightbox.hidden) oncomments();
         });
       document.addEventListener("click", () => closediscordmenu());
       if (discordmenu) discordmenu.addEventListener("click", e => e.stopPropagation());
@@ -176,7 +176,7 @@ export function drivediscord(deps) {
           setsetting("discord_code", msg.code);
           updatediscordmenu();
           resolvediscorduser();
-          if (medialightbox && !medialightbox.hidden) onLightboxCommentsRefresh();
+          if (medialightbox && !medialightbox.hidden) oncomments();
         }
       });
     }
@@ -187,7 +187,7 @@ export function drivediscord(deps) {
     handlediscordoauthcallbackifpresent,
     opendiscordpopup, resolvediscorduser,
     togglediscordmenu, updatediscordavatar,
-    updatediscordmenu, wirediscordui
+    updatediscordmenu, wireui
   };
 
 }

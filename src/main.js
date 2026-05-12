@@ -1,11 +1,11 @@
 "use strict";
 
-import {siteutils} from "./utils.js";
+import {drive} from "./utils.js";
 import {mdhelper} from "./markdown.js";
 import {drivetree} from "./filetree.js";
 import {drivediscord} from "./login.js";
 import {drivemedia} from "./media.js";
-import {contextmenu} from "./contextmenu.js";
+import {ctxmenu} from "./contextmenu.js";
 
 const rootprefix = "soggy cat";
 const cachekey = "sogtree";
@@ -14,7 +14,7 @@ const ttlms = 24 * 60 * 60 * 1000;
 const {
   audioext, basename, esc, extname, formatbytes, formattimecompact,
   iconfor, imageext, norm, rawurl, svg, thumburl, videoext
-} = siteutils;
+} = drive;
 
 const drivegrid = document.querySelector(".drivegrid"),
   searchinput = document.querySelector(".searchinput"),
@@ -34,7 +34,6 @@ const drivegrid = document.querySelector(".drivegrid"),
   discordmenuname = document.querySelector(".discordmenuname"),
   discordmenulogout = document.querySelector(".discordmenulogout"),
   medialightbox = document.querySelector(".medialightbox"),
-  mediabox = document.querySelector(".mediabox"),
   mediabackdrop = document.querySelector(".mediabackdrop"),
   mediaclose = document.querySelector(".mediaclose"),
   mediacontent = document.querySelector(".mediacontent"),
@@ -46,13 +45,13 @@ const drivegrid = document.querySelector(".drivegrid"),
   mediainfo = document.querySelector(".mediainfo"),
   mqnarrow = window.matchMedia("(max-aspect-ratio: 3/4)");
 
-const readmedoc = document.querySelector(".readmecontent");
+const readrivemediaoc = document.querySelector(".readmecontent");
 const readmenavbtns = document.querySelectorAll(".readmenavbtn");
-const discordavatardefaulthtml = discordavatarbutton ? discordavatarbutton.innerHTML : "";
+const pfphtml = discordavatarbutton ? discordavatarbutton.innerHTML : "";
 
 const commentsarchiveurl = "assets/static/drivearchive.json";
 const commentsindexapi = "https://api.soggy.cat/v1/comments";
-const commentsliveapibase = "https://api.soggy.cat";
+const commentslivebase = "https://api.soggy.cat";
 
 let pathhistory = [];
 
@@ -71,30 +70,32 @@ const devtools = {
 };
 const threshold = 170;
 
-function helloimyourneighbor() {
-  try {
-    new Audio("assets/audio/hello.mp3").play();
-  } catch {}
+function hello() {
+  try {new Audio("assets/audio/hello.mp3").play()}
+  catch {}
 }
 const emitevent = (isopen, orientation) => {
-  globalThis.dispatchEvent(new globalThis.CustomEvent("devtoolschange", { detail: { isopen, orientation } }));
-  if (isopen) { helloimyourneighbor(); }
+  globalThis.dispatchEvent(new globalThis.CustomEvent("devtoolschange", {detail: {isopen, orientation}}));
+  if (isopen) {hello()}
 };
-const main = ({ emitevents = true } = {}) => {
+const main = ({emitevents = true} = {}) => {
   const widththresh = globalThis.outerWidth - globalThis.innerWidth > threshold;
   const heightthresh = globalThis.outerHeight - globalThis.innerHeight > threshold;
   const orientation = widththresh ? "vertical" : "horizontal";
-  if (!(heightthresh && widththresh) && ((globalThis.Firebug && globalThis.Firebug.chrome && globalThis.Firebug.chrome.isInitialized) || widththresh || heightthresh)) {
-    if ((!devtools.isopen || devtools.orientation !== orientation) && emitevents) { emitevent(true, orientation); }
+  if (!(heightthresh && widththresh) && ((
+    globalThis.Firebug && globalThis.Firebug.chrome && 
+    globalThis.Firebug.chrome.isInitialized) || widththresh || heightthresh)
+  ) {
+    if ((!devtools.isopen || devtools.orientation !== orientation) && emitevents) {emitevent(true, orientation)}
     devtools.isopen = true;
     devtools.orientation = orientation;
   } else {
-    if (devtools.isopen && emitevents) { emitevent(false, undefined); }
+    if (devtools.isopen && emitevents) {emitevent(false, undefined)}
     devtools.isopen = false;
     devtools.orientation = undefined;
   }
 };
-main({ emitevents: false });
+main({emitevents: false});
 setInterval(main, 500);
 
 /*//////////////////////////////////////////////////////////////////////*/
@@ -118,7 +119,7 @@ function getsetting(key, fallback) {
   return s[key] === undefined ? fallback : s[key];
 }
 
-function updateloginhint() {
+function hidehint() {
   if (!loginhint) return;
   loginhint.hidden = true;
   loginhint.classList.remove("fade");
@@ -126,32 +127,32 @@ function updateloginhint() {
 
 const discord = drivediscord({
   esc, setsetting, getsetting,
-  commentsliveapibase, loginhint,
+  commentslivebase, loginhint,
   discordavatarbutton, discordmenu,
   discordmenuavatar, discordmenuname,
-  discordmenulogout, discordavatardefaulthtml,
-  updateloginhint
+  discordmenulogout, pfpdefault: pfphtml,
+  hidehint
 });
 
-function updatebackdisabled() {
+function syncback() {
   if (!backbutton) return;
   backbutton.disabled = pathhistory.length === 0;
   backbutton.setAttribute("aria-disabled", pathhistory.length > 0 ? "false" : "true");
 }
 
-function resetPathAndRefreshNav() {
+function resetpath() {
   pathhistory = [];
-  updatebackdisabled();
+  syncback();
 }
 
-function hashfilepath() {
+function hashpath() {
   const h = String(location.hash || "");
   if (!h || h === "#") return "";
   const m = h.match(/^#file=(.+)$/);
   const raw = m ? m[1] : h.startsWith("#") ? h.slice(1) : h;
   try {return decodeURIComponent(raw)} catch {return ""}
 }
-function sethashfilepath(path) {
+function sethashpath(path) {
   const p = String(path || "");
   const nh = p ? `#${encodeURI(p)}` : "";
   if (location.hash !== nh) history.replaceState({}, "", `${location.pathname}${location.search}${nh}`);
@@ -159,8 +160,8 @@ function sethashfilepath(path) {
 
 let media;
 
-function openfromhashifany() {
-  const p = hashfilepath();
+function openfromhash() {
+  const p = hashpath();
   if (!p) return;
   const normp = String(p).replace(/^\/+/, "");
   const folderonly = state.tree.some(x => x.type === "tree" && x.path === normp);
@@ -168,7 +169,7 @@ function openfromhashifany() {
     if (state.cwd !== normp) {
       pathhistory = [""];
       state.cwd = normp;
-      updatebackdisabled();
+      syncback();
       rendergrid();
     }
     return;
@@ -179,7 +180,7 @@ function openfromhashifany() {
   if (state.cwd !== folder) {
     pathhistory = [""];
     state.cwd = folder;
-    updatebackdisabled();
+    syncback();
     rendergrid();
   }
   media.openlightbox(rawurl(normp), normp, videoext.test(normp));
@@ -281,8 +282,8 @@ function rendergrid() {
 const tree = drivetree({
   state, rootprefix, cachekey, ttlms,
   drivegrid, refreshtime, esc, norm,
-  resetPathAndRefreshNav, rendergrid,
-  openfromhashifany
+  resetpath, rendergrid,
+  openfromhash
 });
 
 media = drivemedia({
@@ -291,9 +292,9 @@ media = drivemedia({
   formatbytes, formattimecompact,
   imageext, videoext, audioext,
   rawurl, listchildren: tree.listchildren,
-  sethashfilepath, updateloginhint,
-  commentsarchiveurl, commentsindexapi, commentsliveapibase,
-  medialightbox, mediabox, mediabackdrop, mediaclose,
+  sethash: sethashpath, hidehint,
+  commentsarchiveurl, commentsindexapi, commentslivebase,
+  medialightbox, mediabackdrop, mediaclose,
   mediacontent, medianavleft, medianavright, mediaregionlayer,
   medicomments, medicommentslist, mediainfo
 });
@@ -303,34 +304,34 @@ function navigate(path, opts) {
   if (opts?.crumb) pathhistory = [];
   else if (opts?.stack && next !== state.cwd) pathhistory.push(state.cwd);
   state.cwd = next;
-  updatebackdisabled();
+  syncback();
   rendergrid();
 }
 
 function gobackfolder() {
   if (!pathhistory.length) return;
   state.cwd = pathhistory.pop() || "";
-  updatebackdisabled();
+  syncback();
   rendergrid();
 }
 
-function setcommentsopen(show) {
+function setcomments(show) {
   state.commentsopen = show;
   if (commentsbutton)
     commentsbutton.classList.toggle("commentsmuted", !show);
   setsetting("commentson", show ? 1 : 0);
-  updateloginhint();
+  hidehint();
 }
 
 const {showmddoc} = mdhelper({
-  readmedoc, readmenavbtns,
+  readrivemediaoc, readmenavbtns,
   setsetting, esc
 });
 
-function updatereadmepreference(open) {
+function readmepref(open) {
   setsetting(mqnarrow.matches ? "readmenarrow" : "readmewide", open ? 1 : 0);
 }
-function readmestartstate() {
+function readmeinit() {
   return mqnarrow.matches ? getsetting("readmenarrow", 0) === 1 : getsetting("readmewide", 1) !== 0;
 }
 function togglereadme() {
@@ -338,7 +339,7 @@ function togglereadme() {
   const open = !goog.classList.contains("readmeopen");
   goog.classList.toggle("readmeopen", open);
   if (readmebutton) readmebutton.classList.toggle("readmeclosed", !open);
-  updatereadmepreference(open);
+  readmepref(open);
 }
 function updatenarrowclass() {
   if (goog) goog.classList.toggle("narrowaspect", mqnarrow.matches);
@@ -349,7 +350,7 @@ function updatenarrowclass() {
 updatenarrowclass();
 
 if (goog) {
-  goog.classList.toggle("readmeopen", readmestartstate());
+  goog.classList.toggle("readmeopen", readmeinit());
   if (readmebutton)
     readmebutton.classList.toggle("readmeclosed", !goog.classList.contains("readmeopen"));
   goog.classList.add("initialized");
@@ -362,14 +363,14 @@ function setview(listmode) {
   setsetting("viewmode", listmode ? "list" : "grid");
   rendergrid();
 }
-function updatereadmeicon() {
+function readmebtn() {
   if (!readmebutton || !goog) return;
   readmebutton.classList.toggle("readmeclosed", !goog.classList.contains("readmeopen"));
 }
 
-discord.wirediscordui({
+discord.wireui({
   medialightbox,
-  onLightboxCommentsRefresh: () => media.refreshcoomentui()
+  oncomments: () => media.refreshcomments()
 });
 
 searchinput.addEventListener("input", () => {
@@ -379,7 +380,7 @@ searchinput.addEventListener("input", () => {
 refreshbutton.addEventListener("click", () => {
   tree.clearcache();
   pathhistory = [];
-  updatebackdisabled();
+  syncback();
   tree.setrefreshtime();
   tree.loadtree(true);
 });
@@ -393,31 +394,34 @@ for (const b of readmenavbtns) {
 }
 if (commentsbutton)
   commentsbutton.addEventListener("click", () => {
-    setcommentsopen(!state.commentsopen);
+    setcomments(!state.commentsopen);
     if (medialightbox && !medialightbox.hidden) {
-      media.refreshcoomentui();
+      media.refreshcomments();
     }
   });
 
 window.addEventListener("resize", () => {
-  media.relayoutregions();
+  media.relayout();
 });
 if (mediaclose) mediaclose.addEventListener("click", media.closelightbox);
 if (mediabackdrop) mediabackdrop.addEventListener("click", () => {
-  if (media.hascommentfocus()) media.clearcommentfocus();
+  if (media.hasfocus()) media.clearcommentfocus();
   else media.closelightbox();
 });
-if (mediabox) mediabox.addEventListener("click", e => {
-  if (!medialightbox || medialightbox.hidden) return;
-  const t = e.target;
-  const inregionlayer = !!mediaregionlayer?.contains(t);
-  if (mediacontent?.contains(t)) return;
-  if (medicomments?.contains(t)) return;
-  if (inregionlayer) return;
-  if (mediaclose?.contains?.(t)) return;
-  if (medianavleft?.contains?.(t) || medianavright?.contains?.(t)) return;
-  media.clearcommentfocus();
-});
+{
+  const box = document.querySelector(".mediabox");
+  if (box) box.addEventListener("click", e => {
+    if (!medialightbox || medialightbox.hidden) return;
+    const t = e.target;
+    const inregionlayer = !!mediaregionlayer?.contains(t);
+    if (mediacontent?.contains(t)) return;
+    if (medicomments?.contains(t)) return;
+    if (inregionlayer) return;
+    if (mediaclose?.contains?.(t)) return;
+    if (medianavleft?.contains?.(t) || medianavright?.contains?.(t)) return;
+    media.clearcommentfocus();
+  });
+}
 if (medianavleft) medianavleft.addEventListener("click", () => media.steplightboximage(-1));
 if (medianavright) medianavright.addEventListener("click", () => media.steplightboximage(1));
 if (medicommentslist) {
@@ -427,18 +431,18 @@ if (medicommentslist) {
   medicommentslist.addEventListener("touchmove", e => e.stopPropagation(), {passive: true});
 }
 
-function trapscrollevent(e) {
+function trapscroll(e) {
   if (!medialightbox || medialightbox.hidden) return;
   const t = e.target;
   if ((medicomments && medicomments.contains(t)) || (medicommentslist && medicommentslist.contains(t))) return;
   e.preventDefault();
 }
-document.addEventListener("wheel", trapscrollevent, {passive: false, capture: true});
-document.addEventListener("touchmove", trapscrollevent, {passive: false, capture: true});
+document.addEventListener("wheel", trapscroll, {passive: false, capture: false});
+document.addEventListener("touchmove", trapscroll, {passive: false, capture: false});
 
 window.addEventListener("hashchange", () => {
   if (medialightbox && !medialightbox.hidden) media.closelightbox();
-  openfromhashifany();
+  openfromhash();
 });
 document.addEventListener("keydown", e => {
   if (medialightbox && !medialightbox.hidden) {
@@ -450,30 +454,28 @@ document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
   if (goog && mqnarrow.matches && goog.classList.contains("readmeopen")) {
     goog.classList.remove("readmeopen");
-    updatereadmepreference(false);
-    updatereadmeicon();
+    readmepref(false);
+    readmebtn();
   }
 });
 
 /*//////////////////////////////////////////////////////////////////////*/
 
-const meowmeow = {
+const pub = {
   rawurl, thumburl,
-  openlightbox: (...args) => media.openlightbox(...args),
+  openlightbox: (...a) => media.openlightbox(...a),
   imageext, videoext
 };
-globalThis.meow = meowmeow;
-contextmenu(() => meowmeow);
+globalThis.meow = pub;
+ctxmenu(() => pub);
 
-/*//////////////////////////////////////////////////////////////////////*/
-
-updatebackdisabled();
-updatereadmeicon();
-setcommentsopen(getsetting("commentson", 0) === 1);
+syncback();
+readmebtn();
+setcomments(getsetting("commentson", 0) === 1);
 setview(getsetting("viewmode", "grid") === "list");
 discord.updatediscordavatar();
 discord.handlediscordoauthcallbackifpresent();
 if (!(window.opener && window.opener !== window)) discord.resolvediscorduser();
-showmddoc(getsetting("readmedoc", "README.md"));
+showmddoc(getsetting("readrivemediaoc", "README.md"));
 tree.loadtree(false);
-window.setTimeout(openfromhashifany, 0);
+window.setTimeout(openfromhash, 0);

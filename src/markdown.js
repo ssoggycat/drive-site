@@ -1,7 +1,7 @@
 "use strict";
 
 export function mdhelper(deps) {
-    const readmedoc = deps.readmedoc;
+    const readrivemediaoc = deps.readrivemediaoc;
     const readmenavbtns = deps.readmenavbtns;
     const setsetting = deps.setsetting;
     const esc = deps.esc;
@@ -33,7 +33,7 @@ export function mdhelper(deps) {
     }
 
     async function loadmddoc(name) {
-      if (!readmedoc) return;
+      if (!readrivemediaoc) return;
       const key = String(name || "README.md");
       if (mdcache.has(key)) return mdcache.get(key);
       const islocal = location.hostname === "127.0.0.1" || location.hostname === "localhost";
@@ -45,14 +45,14 @@ export function mdhelper(deps) {
     }
 
     async function showmddoc(name) {
-      if (!readmedoc) return;
+      if (!readrivemediaoc) return;
       const key = String(name || "README.md");
       const txt = await loadmddoc(key);
-      readmedoc.innerHTML = mdtohtml(txt);
+      readrivemediaoc.innerHTML = mdtohtml(txt);
       for (const b of readmenavbtns)
         b.classList.toggle("active", b.getAttribute("data-doc") === key);
-      setsetting("readmedoc", key);
+      setsetting("readrivemediaoc", key);
     }
 
-  return {loadmddoc, mdtohtml, showmddoc};
+  return {showmddoc};
 }

@@ -115,9 +115,9 @@ export function drivetree(deps) {
           state.branch = cached.branch || "main";
           state.truncated = !!cached.truncated;
           setrefreshtime(Math.floor((Date.now() - cached.savedat) / 3600000));
-          deps.resetPathAndRefreshNav();
+          deps.resetpath();
           deps.rendergrid();
-          deps.openfromhashifany();
+          deps.openfromhash();
           return;
         }
       }
@@ -132,9 +132,9 @@ export function drivetree(deps) {
         state.truncated = fresh.truncated;
         savecache({tree: state.tree, branch: state.branch, truncated: state.truncated});
         setrefreshtime(0);
-        deps.resetPathAndRefreshNav();
+        deps.resetpath();
         deps.rendergrid();
-        deps.openfromhashifany();
+        deps.openfromhash();
       } catch (e) {
         stoploading();
         drivegrid.innerHTML = `<div class="errorstate">couldnt load repo :( ${esc(e.message || String(e))}</div>`;

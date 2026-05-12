@@ -13,8 +13,7 @@ const svg = {
 };
 
 function esc(s) {
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 function norm(p) {return (p || "").replace(/\/+$/, "")}
 function basename(p) {
@@ -31,13 +30,9 @@ function formatbytes(bytes) {
   const n = Number(bytes);
   if (!Number.isFinite(n) || n < 0) return "";
   if (n < 1024) return `${Math.round(n)} B`;
-  const units = ["KB", "MB", "GB", "TB"];
-  let v = n / 1024;
-  let idx = 0;
-  while (v >= 1024 && idx < units.length - 1) {
-    v /= 1024;
-    idx++;
-  }
+  const units = ["kb", "mb", "gb", "tb"];
+  let v = n / 1024; let idx = 0;
+  while (v >= 1024 && idx < units.length - 1) {v /= 1024; idx++}
   return `${v.toFixed(v >= 10 ? 1 : 2)} ${units[idx]}`;
 }
 function formattimecompact(sec) {
@@ -73,18 +68,9 @@ function iconfor(name) {
   return svg.generic;
 }
 
-export const siteutils = {
-  audioext,
-  basename,
-  esc,
-  extname,
-  formatbytes,
-  formattimecompact,
-  iconfor,
-  imageext,
-  norm,
-  rawurl,
-  svg,
-  thumburl,
-  videoext
+export const drive = {
+  audioext, basename, esc, extname,
+  formatbytes, formattimecompact,
+  iconfor, imageext, norm,
+  rawurl, svg, thumburl, videoext
 };
