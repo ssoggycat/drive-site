@@ -1,6 +1,6 @@
-<img src="assets/images/banner.png" title="the other cats drive.">
+<img src="assets/images/banner.png" title="&quot;the soggy drive&quot;. an image of shark sitting in grass is visible to the right.">
 <h3>heyo!! hey!!! <img src="assets/images/sogmoji/sog.png" width="22"></h3>
-<p>this is a site for collections of other cats.</p>
+<p>this is an site for all images of tina.</p>
 
 <p>you can leave comments on images with <img width="16.5" src="/assets/svg/readme/comment.svg"/> if you want!</p>
 

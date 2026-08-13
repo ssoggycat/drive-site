@@ -18,6 +18,7 @@ export function drivemedia(deps) {
     const sethash = deps.sethash;
     const hidehint = deps.hidehint;
 
+    const commentsarchiveurl = deps.commentsarchiveurl;
     const commentsindexapi = deps.commentsindexapi;
     const commentslivebase = deps.commentslivebase;
 
@@ -85,9 +86,14 @@ export function drivemedia(deps) {
         commentsindexpromise = (async () => {
           let j = null;
           try {
-            const res = await fetch(commentsindexapi, {cache: "force-cache"});
+            const res = await fetch(commentsarchiveurl, {cache: "force-cache"});
             if (res.ok) j = await res.json();
           } catch (_) {}
+          if (!j) {
+            const res = await fetch(commentsindexapi, {cache: "force-cache"});
+            if (!res.ok) return new Map();
+            j = await res.json();
+          }
           const files = Array.isArray(j?.files) ? j.files : [];
           const map = new Map();
           for (const f of files) {

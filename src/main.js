@@ -8,8 +8,8 @@ import {drivemedia} from "./media.js";
 import {ctxmenu} from "./contextmenu.js";
 import {zipdl} from "./zip.js";
 
-const rootprefix = "";
-const cachekey = "cattree";
+const rootprefix = "soggy cat";
+const cachekey = "sogtree";
 const ttlms = 24 * 60 * 60 * 1000;
 
 const {
@@ -56,6 +56,7 @@ const readrivemediaoc = document.querySelector(".readmecontent");
 const readmenavbtns = document.querySelectorAll(".readmenavbtn");
 const pfphtml = discordavatarbutton ? discordavatarbutton.innerHTML : "";
 
+const commentsarchiveurl = "assets/static/drivearchive.json";
 const commentsindexapi = "https://api.soggy.cat/v1/comments";
 const commentslivebase = "https://api.soggy.cat";
 
@@ -76,8 +77,13 @@ const devtools = {
 };
 const threshold = 170;
 
+function hello() {
+  try {new Audio("assets/audio/hello.mp3").play()}
+  catch {}
+}
 const emitevent = (isopen, orientation) => {
   globalThis.dispatchEvent(new globalThis.CustomEvent("devtoolschange", {detail: {isopen, orientation}}));
+  if (isopen) {hello()}
 };
 const main = ({emitevents = true} = {}) => {
   const widththresh = globalThis.outerWidth - globalThis.innerWidth > threshold;
@@ -98,6 +104,65 @@ const main = ({emitevents = true} = {}) => {
 };
 main({emitevents: false});
 setInterval(main, 500);
+
+/*//////////////////////////////////////////////////////////////////////*/
+
+// tunes
+(function () {
+
+        var player = document.querySelector('.miniplayer');
+        var audio = player.querySelector('.miniplayeraudio');
+        var toggle = player.querySelector('.miniplayertoggle');
+        var iconplay = player.querySelector('.miniplayericonplay');
+        var iconpause = player.querySelector('.miniplayericonpause');
+        var progress = player.querySelector('.miniplayerprogress');
+        var fill = player.querySelector('.miniplayerprogressfill');
+        var dragging = false;
+
+        function changeicon() {
+          if (audio.paused) {
+            player.classList.remove('playing');
+            iconplay.style.display = 'block';
+            iconpause.style.display = 'none';
+            toggle.title = 'play'; toggle.setAttribute('aria-label', 'play');
+          } else {
+            player.classList.add('playing');
+            iconplay.style.display = 'none';
+            iconpause.style.display = 'block';
+            toggle.title = 'pause'; toggle.setAttribute('aria-label', 'pause');
+          }
+        }
+        changeicon();
+        toggle.addEventListener('click', function () {
+          if (audio.paused) audio.play(); else audio.pause();
+        });
+        audio.addEventListener('play', changeicon);
+        audio.addEventListener('pause', changeicon);
+        audio.addEventListener('playing', changeicon);
+        audio.addEventListener('timeupdate', function () {
+          if (!dragging && audio.duration) fill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+        });
+        function seekbar(e) {
+          var rect = progress.getBoundingClientRect();
+          var x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+          var ratio = Math.max(0, Math.min(1, x / rect.width));
+          fill.style.width = (ratio * 100) + '%';
+          if (audio.duration) audio.currentTime = ratio * audio.duration;
+        }
+        progress.addEventListener('pointerdown', function(e) {
+          dragging = true;
+          progress.setPointerCapture(e.pointerId);
+          seekbar(e);
+        });
+        progress.addEventListener('pointermove', function(e) {
+          if (dragging) seekbar(e);
+        });
+        progress.addEventListener('pointerup', function(e) {
+          dragging = false;
+          try {progress.releasePointerCapture(e.pointerId)} catch (err) {}
+        });
+        progress.addEventListener('pointercancel', function() {dragging = false});
+      })();
 
 /*//////////////////////////////////////////////////////////////////////*/
 
@@ -324,7 +389,7 @@ media = drivemedia({
   imageext, videoext, audioext,
   rawurl, listchildren: tree.listchildren,
   sethash: p => sethashpath(p || state.cwd), hidehint,
-  commentsindexapi, commentslivebase,
+  commentsarchiveurl, commentsindexapi, commentslivebase,
   medialightbox, mediabackdrop, mediaclose,
   mediacontent, medianavleft, medianavright, mediaregionlayer,
   medicomments, medicommentslist, mediainfo, mediacommentbtn

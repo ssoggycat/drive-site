@@ -1,8 +1,5 @@
 "use strict";
 
-// todo: swap for a custom domain once one exists, see miscdrive repo pages settings
-const cdnbase = "https://ssoggycat.github.io/miscdrive";
-
 const imageext = /\.(png|jpe?g|gif|webp|svg|bmp|ico)$/i;
 const videoext = /\.(mp4|webm|mov|mkv)$/i;
 const audioext = /\.(mp3|wav|ogg|flac|m4a|aac)$/i;
@@ -47,18 +44,22 @@ function formattimecompact(sec) {
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
 }
 
-function encpath(p) {
-  return p.split("/").map(encodeURIComponent).join("/");
-}
 function rawurl(path) {
   const p = String(path || "").replace(/\\/g, "/");
-  if (!p) return `${cdnbase}/`;
-  return `${cdnbase}/${encpath(p)}`;
+  const name = basename(p);
+  if (!name) return "https://mirror.guweh.com/";
+  const isvid = videoext.test(name) || p.startsWith("vids/") || p.includes("/vids/");
+  return isvid
+    ? `https://mirror.guweh.com/vids/${encodeURIComponent(name)}`
+    : `https://mirror.guweh.com/${encodeURIComponent(name)}`;
 }
 function thumburl(path) {
-  const p = String(path || "").replace(/\\/g, "/");
-  const noext = p.replace(/\.[^.]+$/, "");
-  return `${cdnbase}/webp/${encpath(noext)}.webp`;
+  const normalized = String(path || "").replace(/\\/g, "/");
+  const b = basename(path);
+  const noext = b.replace(/\.[^.]+$/, "");
+  const invds = normalized.startsWith("vids/") || normalized.includes("/vids/");
+  const base = invds ? "https://mirror.guweh.com/webp/vids" : "https://mirror.guweh.com/webp";
+  return `${base}/${encodeURIComponent(noext)}.webp`;
 }
 function iconfor(name) {
   if (imageext.test(name)) return svg.image;

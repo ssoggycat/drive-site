@@ -29,11 +29,8 @@ export function drivetree(deps) {
       try {localStorage.removeItem(cachekey)} catch (_) {}
     }
 
-    // todo: swap for a custom domain once one exists, see miscdrive repo pages settings
-    const cdnbase = "https://ssoggycat.github.io/miscdrive";
-
     async function mirrorfetchjson(path) {
-      const res = await fetch(`${cdnbase}/${path}`, {cache: "force-cache"});
+      const res = await fetch(`https://mirror.guweh.com/${path}`, {cache: "force-cache"});
       if (!res.ok) throw new Error(`mirror fetch failed (${res.status})`);
       return await res.json();
     }
@@ -66,14 +63,14 @@ export function drivetree(deps) {
         {headers: {Accept: "application/vnd.github+json"}})).json();
     }
     async function fetchtreefresh() {
-      const meta = await githubfetch(`/repos/ssoggycat/miscdrive`);
+      const meta = await githubfetch(`/repos/ssoggycat/drive-3`);
       state.branch = meta.default_branch || "main";
-      const branch = await githubfetch(`/repos/ssoggycat/miscdrive/branches/${state.branch}`);
-      const gitcommit = await githubfetch(`/repos/ssoggycat/miscdrive/git/commits/${branch.commit.sha}`);
-      const tree = await githubfetch(`/repos/ssoggycat/miscdrive/git/trees/${gitcommit.tree.sha}?recursive=1`);
+      const branch = await githubfetch(`/repos/ssoggycat/drive-3/branches/${state.branch}`);
+      const gitcommit = await githubfetch(`/repos/ssoggycat/drive-3/git/commits/${branch.commit.sha}`);
+      const tree = await githubfetch(`/repos/ssoggycat/drive-3/git/trees/${gitcommit.tree.sha}?recursive=1`);
       const filtered = (Array.isArray(tree.tree) ? tree.tree : [])
-        .filter((x) => !rootprefix || x.path === rootprefix || x.path.startsWith(`${rootprefix}/`))
-        .map((x) => ({...x, path: rootprefix ? x.path.slice(`${rootprefix}/`.length) : x.path}))
+        .filter((x) => x.path === rootprefix || x.path.startsWith(`${rootprefix}/`))
+        .map((x) => ({...x, path: x.path.slice(`${rootprefix}/`.length)}))
         .filter((x) => x.path && !x.path.split("/").some((seg) => seg.startsWith(".")));
       return {tree: filtered, branch: state.branch, truncated: !!tree.truncated};
     }
