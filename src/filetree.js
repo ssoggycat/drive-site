@@ -35,6 +35,15 @@ export function drivetree(deps) {
       return await res.json();
     }
 
+    function pushmirrorrow(blobs, row) {
+      const name = typeof row === "string" ? row : row?.path;
+      if (typeof name !== "string" || !name.trim()) return;
+      const p = name.replace(/^\/+/, "");
+      if (!p || p.includes("..")) return;
+      const sha = typeof row?.sha === "string" && row.sha ? row.sha : undefined;
+      blobs.push(sha ? {type: "blob", path: p, sha} : {type: "blob", path: p});
+    }
+
     async function fetchtreemirror() {
       const [images, videos] = await Promise.all([
         mirrorfetchjson("images.json"),
@@ -43,18 +52,8 @@ export function drivetree(deps) {
       const imgrows = Array.isArray(images) ? images : [];
       const vidrows = Array.isArray(videos) ? videos : [];
       const blobs = [];
-      for (const name of imgrows) {
-        if (typeof name !== "string" || !name.trim()) continue;
-        const p = name.replace(/^\/+/, "");
-        if (!p || p.includes("..")) continue;
-        blobs.push({type: "blob", path: p });
-      }
-      for (const name of vidrows) {
-        if (typeof name !== "string" || !name.trim()) continue;
-        const p = name.replace(/^\/+/, "");
-        if (!p || p.includes("..")) continue;
-        blobs.push({type: "blob", path: p});
-      }
+      for (const row of imgrows) pushmirrorrow(blobs, row);
+      for (const row of vidrows) pushmirrorrow(blobs, row);
       return {tree: blobs, branch: "mirror", truncated: false};
     }
 
