@@ -29,21 +29,13 @@ export function drivetree(deps) {
       try {localStorage.removeItem(cachekey)} catch (_) {}
     }
 
-    const cdnbase = "https://misc-cdn.soggy.cat";
+    // todo: swap for a custom domain once one exists, see miscdrive repo pages settings
+    const cdnbase = "https://ssoggycat.github.io/miscdrive";
 
     async function mirrorfetchjson(path) {
       const res = await fetch(`${cdnbase}/${path}`, {cache: "force-cache"});
       if (!res.ok) throw new Error(`mirror fetch failed (${res.status})`);
       return await res.json();
-    }
-
-    function pushmirrorrow(blobs, row) {
-      const name = typeof row === "string" ? row : row?.path;
-      if (typeof name !== "string" || !name.trim()) return;
-      const p = name.replace(/^\/+/, "");
-      if (!p || p.includes("..")) return;
-      const sha = typeof row?.sha === "string" && row.sha ? row.sha : undefined;
-      blobs.push(sha ? {type: "blob", path: p, sha} : {type: "blob", path: p});
     }
 
     async function fetchtreemirror() {
@@ -54,8 +46,18 @@ export function drivetree(deps) {
       const imgrows = Array.isArray(images) ? images : [];
       const vidrows = Array.isArray(videos) ? videos : [];
       const blobs = [];
-      for (const row of imgrows) pushmirrorrow(blobs, row);
-      for (const row of vidrows) pushmirrorrow(blobs, row);
+      for (const name of imgrows) {
+        if (typeof name !== "string" || !name.trim()) continue;
+        const p = name.replace(/^\/+/, "");
+        if (!p || p.includes("..")) continue;
+        blobs.push({type: "blob", path: p });
+      }
+      for (const name of vidrows) {
+        if (typeof name !== "string" || !name.trim()) continue;
+        const p = name.replace(/^\/+/, "");
+        if (!p || p.includes("..")) continue;
+        blobs.push({type: "blob", path: p});
+      }
       return {tree: blobs, branch: "mirror", truncated: false};
     }
 

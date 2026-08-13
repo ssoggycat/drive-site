@@ -56,6 +56,7 @@ const readrivemediaoc = document.querySelector(".readmecontent");
 const readmenavbtns = document.querySelectorAll(".readmenavbtn");
 const pfphtml = discordavatarbutton ? discordavatarbutton.innerHTML : "";
 
+const commentsindexapi = "https://api.soggy.cat/v1/comments";
 const commentslivebase = "https://api.soggy.cat";
 
 let pathhistory = [];
@@ -323,7 +324,7 @@ media = drivemedia({
   imageext, videoext, audioext,
   rawurl, listchildren: tree.listchildren,
   sethash: p => sethashpath(p || state.cwd), hidehint,
-  commentslivebase,
+  commentsindexapi, commentslivebase,
   medialightbox, mediabackdrop, mediaclose,
   mediacontent, medianavleft, medianavright, mediaregionlayer,
   medicomments, medicommentslist, mediainfo, mediacommentbtn

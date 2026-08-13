@@ -1,6 +1,7 @@
 "use strict";
 
-const cdnbase = "https://misc-cdn.soggy.cat";
+// todo: swap for a custom domain once one exists, see miscdrive repo pages settings
+const cdnbase = "https://ssoggycat.github.io/miscdrive";
 
 const imageext = /\.(png|jpe?g|gif|webp|svg|bmp|ico)$/i;
 const videoext = /\.(mp4|webm|mov|mkv)$/i;
