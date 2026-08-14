@@ -463,6 +463,27 @@ li {
     gap: 8px; padding: 10px;
 }
 
+.foldersize {
+    margin-left: auto; flex-shrink: 0;
+    color: #9aa0a6; font-size: 0.78em;
+}
+
+.folderreadme {
+    background: #1b1b1b; border-radius: 10px;
+    padding: 4px 18px; margin-bottom: 12px;
+}
+.folderreadme[hidden] {display: none}
+.folderreadme h1, .folderreadme h2, .folderreadme h3,
+.folderreadme h4, .folderreadme h5, .folderreadme h6 {
+    color: #e3e3e3; margin: 0.6em 0 0.3em;
+}
+.folderreadme p {color: #c5d5f3; line-height: 1.5}
+.folderreadme a {color: #8ab4f8}
+.folderreadme pre {
+    background: #111; border-radius: 6px;
+    padding: 10px; overflow: auto;
+}
+
 .filemore {
     margin-left: auto;
     width: 34px; height: 34px;
@@ -826,6 +847,11 @@ li {
 .mediacommentbody {
     max-height: 5.6em;
     overflow: auto;
+}
+
+.mediacommentsempty {
+    color: #9aa0a6; font-size: 13px;
+    text-align: center; padding: 18px 10px;
 }
 
 /*//////////////////////////////////////////////////////////////////////*/

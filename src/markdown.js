@@ -69,5 +69,5 @@ export function mdhelper(deps) {
       setsetting("readrivemediaoc", key);
     }
 
-  return {showmddoc};
+  return {mdtohtml, showmddoc};
 }

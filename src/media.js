@@ -179,6 +179,12 @@ export function drivemedia(deps) {
 
       const loggedin = !!getsetting("discord_token", "");
       comments = (Array.isArray(comments) ? comments : []).filter(c => (c?.plain || "").trim().length > 0);
+      if (!comments.length) {
+        const empty = document.createElement("div");
+        empty.className = "mediacommentsempty";
+        empty.textContent = "no comments yet";
+        medicommentslist.appendChild(empty);
+      }
       const byid = new Map();
       for (const c of comments) {
         const key = c?.replyid ? String(c.replyid) : String(c?.id || "");

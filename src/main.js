@@ -13,7 +13,7 @@ const cachekey = "sogtree";
 const ttlms = 24 * 60 * 60 * 1000;
 
 const {
-  audioext, basename, esc, extname, formatbytes, formattimecompact,
+  audioext, basename, esc, extname, formatbytes, formatfoldersize, formattimecompact,
   iconfor, imageext, norm, rawurl, sharelink, svg, thumburl, videoext
 } = drive;
 
@@ -50,6 +50,7 @@ const drivegrid = document.querySelector(".drivegrid"),
   medicomments = document.querySelector(".mediacomments"),
   medicommentslist = document.querySelector(".mediacommentslist"),
   mediainfo = document.querySelector(".mediainfo"),
+  folderreadme = document.querySelector(".folderreadme"),
   mqnarrow = window.matchMedia("(max-aspect-ratio: 3/4)");
 
 const readrivemediaoc = document.querySelector(".readmecontent");
@@ -269,7 +270,20 @@ function folderpreviews(path, max) {
   return out;
 }
 
+function foldersizebytes(path) {
+  const prefix = `${path}/`;
+  let total = 0, known = false;
+  for (const x of state.tree) {
+    if (x.type !== "blob" || !x.path.startsWith(prefix)) continue;
+    if (!Number.isFinite(x.size)) continue;
+    known = true;
+    total += x.size;
+  }
+  return known ? total : null;
+}
+
 function rendergrid() {
+  syncfolderreadme();
   const all = tree.listchildren(state.cwd).filter(x => x.name.toLowerCase().includes(state.filter.toLowerCase()));
   const folders = all.filter(x => x.kind === "folder");
   const files = all.filter(x => x.kind === "file");
@@ -288,8 +302,11 @@ function rendergrid() {
       card.className = "filecard foldergridcard";
       card.setAttribute("data-folderpath", f.path);
       const previews = folderpreviews(f.path, 4);
+      const sizetext = formatfoldersize(foldersizebytes(f.path));
       card.innerHTML =
-        `<div class="filehead">${svg.folder}<span class="name"></span></div>` +
+        `<div class="filehead">${svg.folder}<span class="name"></span>` +
+        (sizetext ? `<span class="foldersize">${esc(sizetext)}</span>` : "") +
+        `</div>` +
         `<div class="thumb folderthumb">` +
         `<div class="thumbicon">${svg.folder}</div>` +
         (previews.length
@@ -421,10 +438,51 @@ function setcomments(show) {
   hidehint();
 }
 
-const {showmddoc} = mdhelper({
+const {mdtohtml, showmddoc} = mdhelper({
   readrivemediaoc, readmenavbtns,
   setsetting, esc
 });
+
+function findfolderreadme(folder) {
+  const prefix = folder ? `${folder}/` : "";
+  for (const x of state.tree) {
+    if (x.type !== "blob" || !x.path.startsWith(prefix)) continue;
+    const rel = x.path.slice(prefix.length);
+    if (!rel || rel.includes("/")) continue;
+    if (/^\.?readme\.md$/i.test(rel)) return x.path;
+  }
+  return null;
+}
+let lastreadmefolder = null;
+const folderreadmecache = new Map();
+async function syncfolderreadme() {
+  if (!folderreadme) return;
+  if (state.cwd === lastreadmefolder) return;
+  lastreadmefolder = state.cwd;
+  const hitpath = findfolderreadme(state.cwd);
+  if (!hitpath) {
+    folderreadme.hidden = true;
+    folderreadme.innerHTML = "";
+    return;
+  }
+  const forfolder = state.cwd;
+  try {
+    let txt = folderreadmecache.get(hitpath);
+    if (txt === undefined) {
+      const res = await fetch(rawurl(hitpath), {cache: "force-cache"});
+      txt = res.ok ? await res.text() : "";
+      folderreadmecache.set(hitpath, txt);
+    }
+    if (state.cwd !== forfolder) return; // navigated away while fetching
+    if (!txt) {folderreadme.hidden = true; folderreadme.innerHTML = ""; return}
+    folderreadme.innerHTML = mdtohtml(txt);
+    folderreadme.hidden = false;
+  } catch {
+    if (state.cwd !== forfolder) return;
+    folderreadme.hidden = true;
+    folderreadme.innerHTML = "";
+  }
+}
 
 function readmepref(open) {
   setsetting(mqnarrow.matches ? "readmenarrow" : "readmewide", open ? 1 : 0);

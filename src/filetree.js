@@ -40,8 +40,10 @@ export function drivetree(deps) {
       if (typeof name !== "string" || !name.trim()) return;
       const p = name.replace(/^\/+/, "");
       if (!p || p.includes("..")) return;
-      const sha = typeof row?.sha === "string" && row.sha ? row.sha : undefined;
-      blobs.push(sha ? {type: "blob", path: p, sha} : {type: "blob", path: p});
+      const blob = {type: "blob", path: p};
+      if (typeof row?.sha === "string" && row.sha) blob.sha = row.sha;
+      if (Number.isFinite(row?.size)) blob.size = row.size;
+      blobs.push(blob);
     }
 
     async function fetchtreemirror() {
