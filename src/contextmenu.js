@@ -35,17 +35,7 @@ export function ctxmenu(get) {
     return {filepath, filename};
   }
 
-  function kindflags(filename) {
-    const a = api();
-    const name = String(filename || "");
-    return {
-      isimg: !!a?.imageext?.test?.(name),
-      isvid: !!a?.videoext?.test?.(name)
-    };
-  }
-
-  function labels(filename) {
-    const {isimg, isvid} = kindflags(filename);
+  function labels(isvid) {
     return {
       newtab: isvid ? "Preview video in new tab" : "Preview image in new tab",
       download: isvid ? "Download video" : "Download image",
@@ -118,37 +108,67 @@ export function ctxmenu(get) {
     }
   }
 
-  async function clipblob(url, filename, kindlabel, {allowurlfallback} = {allowurlfallback: true}) {
+  /*//////////////////////////////////////////////////////////////////////*/
+
+  async function imagepng(url) {
+    const blob = await fetchblob(url);
+    if (blob.type === "image/png") return blob;
+
+    const objurl = URL.createObjectURL(blob);
+    try {
+      const image = new Image();
+      image.src = objurl;
+      await image.decode();
+
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      canvas.getContext("2d").drawImage(image, 0, 0);
+      return await new Promise((resolve, reject) => {
+        canvas.toBlob(png => {
+          if (png) resolve(png);
+          else reject(new Error("Image conversion failed"));
+        }, "image/png");
+      });
+    } finally {
+      URL.revokeObjectURL(objurl);
+    }
+  }
+
+  async function clipimage(url) {
+    const clipboard = navigator.clipboard;
+    if (!clipboard?.write || !globalThis.ClipboardItem) {
+      window.alert("This browser does not support copying images here.");
+      return;
+    }
+
+    const png = imagepng(url);
+    try {
+      await Promise.all([png, clipboard.write([new ClipboardItem({"image/png": png})])]);
+    } catch (error) {
+      png.catch(() => {});
+      const message = error?.name === "NotAllowedError"
+        ? "Could not copy the image. Check clipboard permissions for this site and try again."
+        : "Could not copy the image. Try again or use Download image.";
+      window.alert(message);
+    }
+  }
+
+  async function clipvideo(url) {
     try {
       const blob = await fetchblob(url);
       const type = blob.type || "application/octet-stream";
-      if (navigator.clipboard && globalThis.ClipboardItem) {
-        await navigator.clipboard.write([new ClipboardItem({[type]: blob})]);
-        return;
-      }
-      if (allowurlfallback && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
-        return;
-      }
+      await navigator.clipboard.write([new ClipboardItem({[type]: blob})]);
     } catch {
-      try {
-        if (allowurlfallback && navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(url);
-          return;
-        }
-      } catch {}
+      cliptext(url);
     }
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
-        return;
-      }
-    } catch {}
   }
 
   function cliptext(text) {
     try {navigator.clipboard?.writeText?.(text)?.catch?.(() => {})} catch {}
   }
+
+  /*//////////////////////////////////////////////////////////////////////*/
 
   function openmenu(x, y, items) {
     const wrap = ensurewrap();
@@ -197,7 +217,8 @@ export function ctxmenu(get) {
     const a = api();
     if (!a || !filepath) return;
     const filename = filepath.split("/").pop() || filepath;
-    const lb = labels(filename);
+    const isvid = a.videoext?.test?.(filename);
+    const lb = labels(isvid);
 
     const items = [
       {
@@ -215,7 +236,7 @@ export function ctxmenu(get) {
       {
         icon: icons.copy,
         label: lb.copy,
-        action: () => clipblob(a.rawurl(filepath), filename, lb.copy, {allowurlfallback: true})
+        action: () => isvid ? clipvideo(a.rawurl(filepath)) : clipimage(a.rawurl(filepath))
       },
       {
         icon: icons.link,
